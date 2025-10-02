@@ -20,6 +20,10 @@ export default function StoryPlay() {
   const stories = useQuery(api.ui.listPublishedStories, { q });
   const mySessions = useQuery(api.ui.listMySessions, {});
   const [editingStoryId, setEditingStoryId] = React.useState<Id<'stories'> | null>(null);
+  const ensure = useMutation(api.ui.ensureUser);
+  React.useEffect(() => {
+    void ensure();
+  }, [ensure]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4">
