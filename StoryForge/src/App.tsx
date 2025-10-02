@@ -1,6 +1,7 @@
 import { Authenticated, Unauthenticated, useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import { useAuth } from '@workos-inc/authkit-react';
+import StoryPlay from './components/ui/storyplay';
 
 export default function App() {
   return (
@@ -12,7 +13,7 @@ export default function App() {
       <main className="p-8 flex flex-col gap-16">
         <h1 className="text-4xl font-bold text-center">Convex + React + WorkOS AuthKit</h1>
         <Authenticated>
-          <Content />
+          <StoryPlay />
         </Authenticated>
         <Unauthenticated>
           <div className="flex flex-col gap-8 w-96 mx-auto">
