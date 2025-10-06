@@ -23,7 +23,7 @@ export default function App() {
       <main className="px-8 py-16">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 pb-2">
               Story Forge
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-lg">
