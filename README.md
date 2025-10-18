@@ -1,26 +1,36 @@
-# StoryForge
+# Story Forge
 
-StoryForge is an interactive storytelling platform that lets you create, edit, and share branching narratives. With powerful editing tools and GitHub integration, you can build immersive stories with multiple paths and outcomes.
+<img src="StoryForge/public/Story_Forge-logo.png" alt="StoryForge Logo" width="150">
+
+# ![StoryForge](https://img.shields.io/badge/StoryForge-Interactive%20Stories-blue?style=for-the-badge)
+
+**StoryForge** is an interactive storytelling platform for creating, editing, and sharing branching narratives. Use AI assistance and collaborative tools to build immersive stories with multiple paths and outcomes.
 
 ---
 
-## 📦 Installation & Setup
+## 📚 Documentation
 
-1. **Navigate to the Project Folder**  
-   Make sure you are inside the `StoryForge` folder (one folder deep into the project root):
+For detailed guides, technical info, and step-by-step instructions, visit our wiki:
 
-   ```bash
-   cd StoryForge
+- [Home](https://github.com/Etown-CS310/Story-Forge/wiki#welcome-to-the-story-forge-wiki) – Overview, app idea, and motivation
+- [Installation & Setup](https://github.com/Etown-CS310/Story-Forge/wiki/Installation-&-Setup) – How to run the project locally
+- [Technical Stack](https://github.com/Etown-CS310/Story-Forge/wiki/Tech-Stack) – Frontend, backend, and libraries
 
-2. **Install Dependencies**
-    Install all required packages:
+---
 
-    npm install
+## 🚀 Quick Start
 
-3. **Run the Development Server**
-    Start the server locally:
+# Navigate to project folder
+```bash
+cd StoryForge
+```
 
-    npm run dev
+# Install dependencies
+```bash
+npm install
+```
 
-4. **Connect with GitHub**
-    Log in using your GitHub account to access and save your stories.
+# Start development server
+```bash
+npm run dev
+```
