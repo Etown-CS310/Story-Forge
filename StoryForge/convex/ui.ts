@@ -14,7 +14,7 @@ export const listStories = query({
   args: { q: v.optional(v.string()) },
   handler: async (ctx, { q }) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error('Not logged in');
+    if (!identity) throw new Error('Unauthorized');
 
     // find the user's DB record
     const user = await ctx.db
@@ -36,8 +36,9 @@ export const listStories = query({
       .withIndex('by_creator', (x) => x.eq('createdBy', user._id))
       .collect();
 
-    // Merge and remove duplicates
-    const combined = [...publicStories, ...userStories.filter((s) => !publicStories.some((p) => p._id === s._id))];
+    // Merge and remove duplicates (efficiently)
+    const seenIds = new Set(publicStories.map((s) => s._id));
+    const combined = [...publicStories, ...userStories.filter((s) => !seenIds.has(s._id))];
     // Optional search filter
     const qq = (q ?? '').toLowerCase();
     return combined
