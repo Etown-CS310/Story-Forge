@@ -1,5 +1,6 @@
 import { Authenticated, Unauthenticated } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-react';
+import { Button } from './components/ui/button';
 import StoryPlay from './components/ui/storyplay';
 
 export default function App() {
@@ -64,21 +65,15 @@ function AuthButton() {
 
   if (user) {
     return (
-      <button
-        onClick={() => signOut()}
-        className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2"
-      >
+      <Button variant="default" size="sm" onClick={() => signOut()}>
         Sign out
-      </button>
+      </Button>
     );
   }
 
   return (
-    <button
-      onClick={() => void signIn()}
-      className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2"
-    >
+    <Button variant="default" size="sm" onClick={() => void signIn()}>
       Sign in
-    </button>
+    </Button>
   );
 }

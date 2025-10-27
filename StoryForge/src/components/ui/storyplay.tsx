@@ -13,7 +13,7 @@ export default function StoryPlay() {
   const [q, setQ] = React.useState('');
   const search = useDebouncedCallback((s: string) => setQ(s), 250);
 
-  const stories = useQuery(api.ui.listPublishedStories, { q });
+  const stories = useQuery(api.ui.listStories, { q });
   const mySessions = useQuery(api.ui.listMySessions, {});
   const [editingStoryId, setEditingStoryId] = React.useState<Id<'stories'> | null>(null);
   const ensure = useMutation(api.ui.ensureUser);

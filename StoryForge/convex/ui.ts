@@ -10,15 +10,38 @@ async function me(ctx: any) {
     .unique();
 }
 
-export const listPublishedStories = query({
+export const listStories = query({
   args: { q: v.optional(v.string()) },
   handler: async (ctx, { q }) => {
-    const res = await ctx.db
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error('Unauthorized');
+
+    // find the user's DB record
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_externalId', (q) => q.eq('externalId', identity.subject))
+      .unique();
+
+    if (!user) throw new Error('User not found');
+
+    // Fetch all public stories
+    const publicStories = await ctx.db
       .query('stories')
       .withIndex('by_public', (x) => x.eq('public', true))
       .collect();
+
+    // Fetch all of the user's stories (including unpublished)
+    const userStories = await ctx.db
+      .query('stories')
+      .withIndex('by_creator', (x) => x.eq('createdBy', user._id))
+      .collect();
+
+    // Merge and remove duplicates (efficiently)
+    const seenIds = new Set(publicStories.map((s) => s._id));
+    const combined = [...publicStories, ...userStories.filter((s) => !seenIds.has(s._id))];
+    // Optional search filter
     const qq = (q ?? '').toLowerCase();
-    return res
+    return combined
       .filter((s) => !qq || s.title.toLowerCase().includes(qq) || (s.summary ?? '').toLowerCase().includes(qq))
       .map((s) => ({ ...s }));
   },
