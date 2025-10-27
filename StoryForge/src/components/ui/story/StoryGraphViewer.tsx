@@ -32,9 +32,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           }
         });
 
-        if (mermaidRef.current) {
-          mermaidRef.current.innerHTML = data.mermaid;
-        }
         const { svg } = await mermaid.render('mermaid-graph', data.mermaid);
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
@@ -155,8 +152,8 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             </p>
           </div>
         )}
-        
-        <div className = "flex justify-center">
+
+        <div className="flex justify-center">
           <div ref={mermaidRef} className="mermaid-container inline-block min-w-full" />
         </div>
       </div>
