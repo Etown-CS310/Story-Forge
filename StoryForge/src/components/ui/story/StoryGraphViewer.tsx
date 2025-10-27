@@ -156,8 +156,8 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           </div>
         )}
         
-        <div className="flex justify-center">
-          <div ref={mermaidRef} className="mermaid-container" />
+        <div className = "flex justify-center">
+          <div ref={mermaidRef} className="mermaid-container inline-block min-w-full" />
         </div>
       </div>
     </div>
