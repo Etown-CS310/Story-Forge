@@ -16,7 +16,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const createEdge = useMutation(api.ui.createEdge);
   const deleteEdge = useMutation(api.ui.deleteEdge);
 
-  const [viewMode, setViewMode] = React.useState<'edit' | 'graph'>('edit');
+  const [viewMode, setViewMode] = React.useState<'edit' | 'graph'>('graph');
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
   const [nodeContent, setNodeContent] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
