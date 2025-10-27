@@ -16,6 +16,7 @@ import type {
 import type * as debug from "../debug.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as queries_stories from "../queries/stories.js";
+import type * as queries_visualization from "../queries/visualization.js";
 import type * as ui from "../ui.js";
 
 /**
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   debug: typeof debug;
   myFunctions: typeof myFunctions;
   "queries/stories": typeof queries_stories;
+  "queries/visualization": typeof queries_visualization;
   ui: typeof ui;
 }>;
 export declare const api: FilterApi<

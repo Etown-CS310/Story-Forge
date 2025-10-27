@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network } from 'lucide-react';
+import StoryGraphViewer from './StoryGraphViewer';
 
 export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories'>; onClose: () => void }) {
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
@@ -15,6 +16,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const createEdge = useMutation(api.ui.createEdge);
   const deleteEdge = useMutation(api.ui.deleteEdge);
 
+  const [viewMode, setViewMode] = React.useState<'edit' | 'graph'>('edit');
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
   const [nodeContent, setNodeContent] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
@@ -53,153 +55,184 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
           <Edit className="w-5 h-5 text-blue-600" />
           Edit Story
         </CardTitle>
-        <Button variant="outline" onClick={onClose} className="gap-2">
-          <X className="w-4 h-4" />
-          Close
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-1 bg-slate-50 dark:bg-slate-800">
+            <button
+              onClick={() => setViewMode('edit')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                viewMode === 'edit'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Edit className="w-3.5 h-3.5" />
+              Edit
+            </button>
+            <button
+              onClick={() => setViewMode('graph')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                viewMode === 'graph'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Network className="w-3.5 h-3.5" />
+              Graph
+            </button>
+          </div>
+          <Button variant="outline" onClick={onClose} className="gap-2">
+            <X className="w-4 h-4" />
+            Close
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* Left: node list */}
-          <div className="space-y-3">
-            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nodes</div>
-            <ScrollArea className="h-96 rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900">
-              <div className="space-y-2">
-                {graph.nodes.map((n: any) => (
-                  <button
-                    key={n._id}
-                    className={`w-full text-left rounded-lg border px-3 py-2.5 text-sm transition-all duration-200 ${
-                      selectedNodeId === n._id
-                        ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 shadow-sm'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800'
-                    }`}
-                    onClick={() => setSelectedNodeId(n._id)}
-                  >
-                    <div className="font-medium truncate text-slate-800 dark:text-white">{n.role}</div>
-                    <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{n.content}</div>
-                  </button>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Middle: edit node */}
-          <div className="space-y-4 md:col-span-2">
-            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Selected Node</div>
-            <textarea
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              rows={8}
-              value={nodeContent}
-              onChange={(e) => setNodeContent(e.target.value)}
-            />
-            <div className="flex gap-3 items-center">
-              <Button
-                onClick={() => {
-                  void (async () => {
-                    if (!selectedNodeId) return;
-                    await updateNode({ nodeId: selectedNodeId, content: nodeContent });
-                  })();
-                }}
-                className="gap-2 bg-blue-600 hover:bg-blue-700"
-              >
-                <Save className="w-4 h-4" />
-                Save Node
-              </Button>
-              {selectedNodeId && selectedNodeId === graph.rootNodeId && (
-                <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
-                  Root Node
-                </span>
-              )}
+        {viewMode === 'graph' ? (
+          <StoryGraphViewer storyId={storyId} />
+        ) : (
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Left: node list */}
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nodes</div>
+              <ScrollArea className="h-96 rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900">
+                <div className="space-y-2">
+                  {graph.nodes.map((n: any) => (
+                    <button
+                      key={n._id}
+                      className={`w-full text-left rounded-lg border px-3 py-2.5 text-sm transition-all duration-200 ${
+                        selectedNodeId === n._id
+                          ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800'
+                      }`}
+                      onClick={() => setSelectedNodeId(n._id)}
+                    >
+                      <div className="font-medium truncate text-slate-800 dark:text-white">{n.role}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{n.content}</div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
 
-            {/* Outgoing edges */}
-            <div className="mt-6">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Outgoing Choices</div>
-              <div className="space-y-3">
-                {outgoing.map((e: any) => {
-                  const to = graph.nodes.find((n: any) => n._id === e.toNodeId);
-                  return (
-                    <div
-                      key={e._id}
-                      className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
-                    >
-                      <div className="flex-1 min-w-0 pr-3">
-                        <div className="font-medium text-sm text-slate-800 dark:text-white">{e.label}</div>
-                        <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
-                          → {(to?.content ?? '').slice(0, 120)}
-                        </div>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          void (async () => {
-                            await deleteEdge({ edgeId: e._id });
-                          })();
-                        }}
-                        className="flex-shrink-0 gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  );
-                })}
-                {outgoing.length === 0 && (
-                  <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                    No outgoing edges.
-                  </div>
-                )}
-              </div>
-
-              {/* Create new node + edge */}
-              <div className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
-                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Branch
-                </div>
-                <Input
-                  placeholder="Choice label"
-                  value={newChoiceLabel}
-                  onChange={(e) => setNewChoiceLabel(e.target.value)}
-                />
-                <textarea
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  rows={4}
-                  placeholder="New node content…"
-                  value={newNodeContent}
-                  onChange={(e) => setNewNodeContent(e.target.value)}
-                />
+            {/* Middle: edit node */}
+            <div className="space-y-4 md:col-span-2">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Selected Node</div>
+              <textarea
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                rows={8}
+                value={nodeContent}
+                onChange={(e) => setNodeContent(e.target.value)}
+              />
+              <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {
                     void (async () => {
                       if (!selectedNodeId) return;
-                      const label = newChoiceLabel.trim();
-                      const content = newNodeContent.trim();
-                      if (!label || !content) return;
-                      await createNodeAndEdge({ storyId, fromNodeId: selectedNodeId, label, content });
-                      setNewChoiceLabel('');
-                      setNewNodeContent('');
+                      await updateNode({ nodeId: selectedNodeId, content: nodeContent });
                     })();
                   }}
-                  className="gap-2 w-full bg-blue-600 hover:bg-blue-700"
+                  className="gap-2 bg-blue-600 hover:bg-blue-700"
                 >
-                  <Plus className="w-4 h-4" />
-                  Add Choice → New Node
+                  <Save className="w-4 h-4" />
+                  Save Node
                 </Button>
+                {selectedNodeId && selectedNodeId === graph.rootNodeId && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
+                    Root Node
+                  </span>
+                )}
+              </div>
 
-                {/* Or connect to existing node */}
-                <ExistingEdgeCreator
-                  nodes={graph.nodes}
-                  fromNodeId={selectedNodeId}
-                  onCreate={async (toNodeId, label) => {
-                    await createEdge({ storyId, fromNodeId: selectedNodeId as Id<'nodes'>, toNodeId, label });
-                  }}
-                />
+              {/* Outgoing edges */}
+              <div className="mt-6">
+                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Outgoing Choices</div>
+                <div className="space-y-3">
+                  {outgoing.map((e: any) => {
+                    const to = graph.nodes.find((n: any) => n._id === e.toNodeId);
+                    return (
+                      <div
+                        key={e._id}
+                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                      >
+                        <div className="flex-1 min-w-0 pr-3">
+                          <div className="font-medium text-sm text-slate-800 dark:text-white">{e.label}</div>
+                          <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
+                            → {(to?.content ?? '').slice(0, 120)}
+                          </div>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            void (async () => {
+                              await deleteEdge({ edgeId: e._id });
+                            })();
+                          }}
+                          className="flex-shrink-0 gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    );
+                  })}
+                  {outgoing.length === 0 && (
+                    <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
+                      No outgoing edges.
+                    </div>
+                  )}
+                </div>
+
+                {/* Create new node + edge */}
+                <div className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
+                  <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Branch
+                  </div>
+                  <Input
+                    placeholder="Choice label"
+                    value={newChoiceLabel}
+                    onChange={(e) => setNewChoiceLabel(e.target.value)}
+                  />
+                  <textarea
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    rows={4}
+                    placeholder="New node content…"
+                    value={newNodeContent}
+                    onChange={(e) => setNewNodeContent(e.target.value)}
+                  />
+                  <Button
+                    onClick={() => {
+                      void (async () => {
+                        if (!selectedNodeId) return;
+                        const label = newChoiceLabel.trim();
+                        const content = newNodeContent.trim();
+                        if (!label || !content) return;
+                        await createNodeAndEdge({ storyId, fromNodeId: selectedNodeId, label, content });
+                        setNewChoiceLabel('');
+                        setNewNodeContent('');
+                      })();
+                    }}
+                    className="gap-2 w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Choice → New Node
+                  </Button>
+
+                  {/* Or connect to existing node */}
+                  <ExistingEdgeCreator
+                    nodes={graph.nodes}
+                    fromNodeId={selectedNodeId}
+                    onCreate={async (toNodeId, label) => {
+                      await createEdge({ storyId, fromNodeId: selectedNodeId as Id<'nodes'>, toNodeId, label });
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
