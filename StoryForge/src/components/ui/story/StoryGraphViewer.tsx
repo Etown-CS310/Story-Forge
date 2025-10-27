@@ -49,12 +49,15 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
   const copyToClipboard = () => {
     if (data) {
-      navigator.clipboard.writeText(data.mermaid).catch((err) => {
-        console.error('Failed to copy to clipboard:', err);
-        setError('Failed to copy to clipboard');
-      });
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      navigator.clipboard.writeText(data.mermaid)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.error('Failed to copy to clipboard:', err);
+          setError('Failed to copy to clipboard');
+        });
     }
   };
 

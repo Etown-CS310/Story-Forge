@@ -30,8 +30,8 @@ export const getStoryMermaid = query({
       } else if (node.role === 'narrator') {
         mermaid += `  ${nodeId}["📖 ${truncatedContent}"]\n`;
       } else if (node.role === 'character') {
-        const charName = node.metadata && typeof node.metadata === 'object' && 'name' in node.metadata 
-          ? node.metadata.name 
+        const charName = node.metadata && typeof node.metadata === 'object' && 'name' in node.metadata
+          ? (typeof node.metadata.name === 'string' ? node.metadata.name : 'Character')
           : 'Character';
         mermaid += `  ${nodeId}["💬 ${charName}: ${truncatedContent}"]\n`;
       } else {
