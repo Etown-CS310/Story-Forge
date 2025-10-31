@@ -273,6 +273,7 @@ export const advanceSession = mutation({
         role: toNode.role,
         content: toNode.content,
         chosenEdgeId: edge._id,
+        edgeContent: edge.label,
         readBy: [user._id],
       });
     }
