@@ -4,22 +4,54 @@ import { Id } from '@/../convex/_generated/dataModel';
 import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send } from 'lucide-react';
+import { Play } from 'lucide-react';
 
-export default function SessionView({ sessionId }: { sessionId: Id<'sessions'> }) {
+export default function SessionView({
+  sessionId,
+  closeActiveSession,
+}: {
+  sessionId: Id<'sessions'>;
+  closeActiveSession: (id: Id<'sessions'> | null) => void;
+}) {
   const data = useQuery(api.ui.getSessionState, { sessionId });
-  const send = useMutation(api.ui.sendUserMessage);
   const choose = useMutation(api.ui.chooseEdge);
+  const advance = useMutation(api.ui.advanceSession);
 
-  const [draft, setDraft] = React.useState('');
-  const onSend = async () => {
-    const text = draft.trim();
-    if (!text) return;
-    setDraft('');
-    await send({ sessionId, content: text });
-  };
+  // Auto-play: repeatedly advance the session by picking the first available choice
+  const [autoPlay, setAutoPlay] = React.useState(false);
+  React.useEffect(() => {
+    if (!autoPlay) return;
+    let cancelled = false;
+
+    const step = async () => {
+      try {
+        const res = await advance({ sessionId });
+        // if server returned null, there are no more choices
+        if (!res || cancelled) {
+          setAutoPlay(false);
+          return;
+        }
+        // wait a bit then continue; session state will re-sync via Convex
+        if (!cancelled)
+          setTimeout(() => {
+            void step();
+          }, 1200);
+      } catch (e) {
+        console.error('Auto-play failed', e);
+        setAutoPlay(false);
+      }
+    };
+
+    // kick off first step
+    setTimeout(() => {
+      void step();
+    }, 600);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoPlay, advance, sessionId]);
 
   if (!data) {
     return (
@@ -33,38 +65,32 @@ export default function SessionView({ sessionId }: { sessionId: Id<'sessions'> }
     <div className="space-y-4">
       <Card className="shadow-md">
         <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-700">
-          <CardTitle className="text-lg">Chat</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Chat</CardTitle>
+            <Button onClick={() => closeActiveSession(null)}>Close session</Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-4">
           <ScrollArea className="h-80 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900">
             <MessageList messages={data.messages} />
           </ScrollArea>
-          <div className="mt-4 flex gap-2">
-            <Input
-              placeholder="Say something…"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) void onSend();
-              }}
-              className="flex-1"
-            />
-            <Button
-              onClick={() => {
-                void onSend();
-              }}
-              className="gap-2 bg-blue-600 hover:bg-blue-700"
-            >
-              <Send className="w-4 h-4" />
-              Send
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
       <Card className="shadow-md">
-        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-700">
+        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <CardTitle className="text-lg">Choices</CardTitle>
+          <div>
+            <Button
+              size="sm"
+              variant={autoPlay ? 'secondary' : 'outline'}
+              onClick={() => setAutoPlay((v) => !v)}
+              className="gap-2"
+            >
+              <Play className="w-4 h-4" />
+              {autoPlay ? 'Stop' : 'Auto'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-4">
           {data.choices.length === 0 ? (
@@ -72,15 +98,16 @@ export default function SessionView({ sessionId }: { sessionId: Id<'sessions'> }
               No choices at this step.
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-3">
               {data.choices.map((c) => (
                 <Button
                   key={c._id}
                   variant="secondary"
+                  textLocation="left"
                   onClick={() => {
                     void choose({ sessionId, edgeId: c._id });
                   }}
-                  className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+                  className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:border-blue-300 dark:hover:border-blue-700 transition-all text-left"
                 >
                   {c.label}
                 </Button>
@@ -102,7 +129,10 @@ function MessageList({ messages }: { messages: any[] }) {
   return (
     <div className="space-y-3">
       {messages.map((m) => (
-        <MessageBubble key={m._id} role={m.role} author={m.author} content={m.content} />
+        <>
+          {m.edgeContent && <MessageBubble key={m._id + '-edge'} role="user" content={m.edgeContent} />}
+          <MessageBubble key={m._id} role={m.role} author={m.author} content={m.content} />
+        </>
       ))}
       <div ref={bottomRef} />
     </div>

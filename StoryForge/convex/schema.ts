@@ -84,6 +84,7 @@ export default defineSchema({
     content: v.string(),
     // derived from choosing an edge; store for audit
     chosenEdgeId: v.optional(v.id('edges')),
+    edgeContent: v.optional(v.string()),
     // read-state
     readBy: v.optional(v.array(v.id('users'))),
   })
