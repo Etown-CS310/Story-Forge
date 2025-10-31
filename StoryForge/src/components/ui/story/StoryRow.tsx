@@ -5,7 +5,15 @@ import { Id } from '@/../convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Edit, Play } from 'lucide-react';
 
-export default function StoryRow({ story, onEdit }: { story: any; onEdit: (id: Id<'stories'>) => void }) {
+export default function StoryRow({
+  story,
+  onEdit,
+  onStart,
+}: {
+  story: any;
+  onEdit: (id: Id<'stories'>) => void;
+  onStart?: (sessionId: Id<'sessions'>) => void;
+}) {
   const create = useMutation(api.ui.startSessionForMe);
   const [creating, setCreating] = React.useState(false);
 
@@ -29,7 +37,8 @@ export default function StoryRow({ story, onEdit }: { story: any; onEdit: (id: I
             void (async () => {
               setCreating(true);
               try {
-                await create({ storyId: story._id });
+                const sessionId = await create({ storyId: story._id });
+                if (onStart && sessionId) onStart(sessionId as Id<'sessions'>);
               } catch (error) {
                 console.error('Failed to create session:', error);
               } finally {

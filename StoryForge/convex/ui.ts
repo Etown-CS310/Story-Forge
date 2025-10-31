@@ -237,27 +237,48 @@ export const chooseEdge = mutation({
         role: toNode.role,
         content: toNode.content,
         chosenEdgeId: edge._id,
+        edgeContent: edge.label,
         readBy: [user._id],
       });
     }
   },
 });
 
-export const sendUserMessage = mutation({
-  args: { sessionId: v.id('sessions'), content: v.string() },
-  handler: async (ctx, { sessionId, content }) => {
+export const advanceSession = mutation({
+  args: { sessionId: v.id('sessions') },
+  handler: async (ctx, { sessionId }) => {
     const user = await me(ctx);
     if (!user) throw new Error('Unauthorized');
+
     const session = await ctx.db.get(sessionId);
     if (!session || !session.participants.includes(user._id)) throw new Error('No access');
 
-    await ctx.db.insert('messages', {
-      sessionId,
-      role: 'user',
-      authorUserId: user._id,
-      content,
-      readBy: [user._id],
-    });
+    const choices = await ctx.db
+      .query('edges')
+      .withIndex('by_story_from', (q: any) => q.eq('storyId', session.storyId).eq('fromNodeId', session.currentNodeId))
+      .order('asc')
+      .collect();
+
+    if (choices.length === 0) return null;
+
+    const edge = choices[0];
+
+    await ctx.db.patch(sessionId, { currentNodeId: edge.toNodeId });
+
+    const toNode = await ctx.db.get(edge.toNodeId);
+    if (toNode) {
+      await ctx.db.insert('messages', {
+        sessionId,
+        nodeId: toNode._id,
+        role: toNode.role,
+        content: toNode.content,
+        chosenEdgeId: edge._id,
+        edgeContent: edge.label,
+        readBy: [user._id],
+      });
+    }
+
+    return edge._id;
   },
 });
 
