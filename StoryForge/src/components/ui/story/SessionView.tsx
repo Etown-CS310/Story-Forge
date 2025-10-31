@@ -129,10 +129,10 @@ function MessageList({ messages }: { messages: any[] }) {
   return (
     <div className="space-y-3">
       {messages.map((m) => (
-        <>
+        <React.Fragment key={m._id}>
           {m.edgeContent && <MessageBubble key={m._id + '-edge'} role="user" content={m.edgeContent} />}
           <MessageBubble key={m._id} role={m.role} author={m.author} content={m.content} />
-        </>
+        </React.Fragment>
       ))}
       <div ref={bottomRef} />
     </div>
