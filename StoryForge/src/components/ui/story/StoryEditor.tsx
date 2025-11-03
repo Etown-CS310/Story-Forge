@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Edit, Link, Plus, Save, Trash2, X, Network } from 'lucide-react';
 import StoryGraphViewer from './StoryGraphViewer';
+import AIAssistant from './AIAssistant';
 
 export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories'>; onClose: () => void }) {
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
@@ -124,6 +125,14 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
               />
+                              <AIAssistant
+                  content={nodeContent}
+                  onApplySuggestion={(newContent) => setNodeContent(newContent)}
+                  onGenerateChoice={(label, description) => {
+                    setNewChoiceLabel(label);
+                    setNewNodeContent(description);
+                  }}
+                />
               <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {
