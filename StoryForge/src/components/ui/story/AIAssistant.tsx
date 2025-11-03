@@ -20,6 +20,23 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const rewriteContent = useAction(api.ai.rewriteContent);
   const generateChoices = useAction(api.ai.generateChoices);
 
+  const [apiKeyMissing, setApiKeyMissing] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkAPIKey = async () => {
+      try {
+        await suggestImprovements({ content: '' }); // small test call
+        setApiKeyMissing(false);
+      } catch (err: any) {
+        if (err.message?.includes('OPENAI_API_KEY')) {
+          setApiKeyMissing(true);
+        }
+      }
+    };
+    void checkAPIKey();
+  }, []);
+
+
   const handleSuggest = async () => {
     if (!content.trim()) {
       setError('No content to analyze');
@@ -104,22 +121,24 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       </CardHeader>
       <CardContent className="pt-4 space-y-4">
         {/* Setup Instructions */}
-        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-sm space-y-2">
-          <div className="font-medium text-blue-900 dark:text-blue-100">
-            Setup Required
+        {apiKeyMissing && (
+          <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 text-sm space-y-2">
+            <div className="font-medium text-blue-900 dark:text-blue-100">
+              Setup Required
+            </div>
+            <div className="text-blue-700 dark:text-blue-300 space-y-1">
+              <p>1. Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline font-medium">OpenAI</a></p>
+              <p>2. Configure in Convex:</p>
+              <code className="block bg-blue-100 dark:bg-blue-900 px-2 py-1.5 rounded font-mono text-xs mt-1">
+                npx convex env set OPENAI_API_KEY sk-your-key-here
+              </code>
+              <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">
+                ✓ Stored securely in Convex environment
+              </p>
+            </div>
           </div>
-          <div className="text-blue-700 dark:text-blue-300 space-y-1">
-            <p>1. Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline font-medium">OpenAI</a></p>
-            <p>2. Configure in Convex:</p>
-            <code className="block bg-blue-100 dark:bg-blue-900 px-2 py-1.5 rounded font-mono text-xs mt-1">
-              npx convex env set OPENAI_API_KEY sk-your-key-here
-            </code>
-            <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">
-              ✓ Stored securely in Convex environment
-            </p>
-          </div>
-        </div>
-
+        )}
+        
         {/* Error Display */}
         {error && (
           <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
