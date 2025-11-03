@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useDebouncedCallback } from 'use-debounce';
 import { BookOpen, Sparkles, Search } from 'lucide-react';
-import { StoryEditor, SessionTile, StoryRow, NewStoryCard } from '@/components/ui/story';
+import { StoryEditor, SessionTile, StoryRow, NewStoryCard, SessionView } from '@/components/ui/story';
 
 // ===================== Story Browser =====================
 export default function StoryPlay() {
@@ -16,6 +16,7 @@ export default function StoryPlay() {
   const stories = useQuery(api.ui.listStories, { q });
   const mySessions = useQuery(api.ui.listMySessions, {});
   const [editingStoryId, setEditingStoryId] = React.useState<Id<'stories'> | null>(null);
+  const [activeSessionId, setActiveSessionId] = React.useState<Id<'sessions'> | null>(null);
   const ensure = useMutation(api.ui.ensureUser);
   React.useEffect(() => {
     void ensure();
@@ -37,9 +38,21 @@ export default function StoryPlay() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input placeholder="Search stories..." onChange={(e) => search(e.target.value)} className="pl-10" />
           </div>
+
           <div className="mt-4 space-y-3">
             {stories?.map((s) => (
-              <StoryRow key={s._id} story={s} onEdit={(id: Id<'stories'>) => setEditingStoryId(id)} />
+              <StoryRow
+                key={s._id}
+                story={s}
+                onEdit={(id: Id<'stories'>) => {
+                  setEditingStoryId(id);
+                  setActiveSessionId(null); // clear session when editing
+                }}
+                onStart={(sessionId: Id<'sessions'>) => {
+                  setActiveSessionId(sessionId);
+                  setEditingStoryId(null); // clear edit when starting
+                }}
+              />
             ))}
             {stories && stories.length === 0 && (
               <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">No stories found.</div>
@@ -50,6 +63,11 @@ export default function StoryPlay() {
 
       {editingStoryId ? (
         <StoryEditor storyId={editingStoryId} onClose={() => setEditingStoryId(null)} />
+      ) : activeSessionId ? (
+        // Show the active session in the main area when we have one
+        <div className="lg:col-span-2">
+          <SessionView sessionId={activeSessionId} closeActiveSession={setActiveSessionId} />
+        </div>
       ) : (
         <Card className="lg:col-span-2 shadow-lg border-slate-200 dark:border-slate-700">
           <CardHeader className="border-b border-slate-100 dark:border-slate-700">

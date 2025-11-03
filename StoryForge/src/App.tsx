@@ -2,6 +2,7 @@ import { Authenticated, Unauthenticated } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-react';
 import { Button } from './components/ui/button';
 import StoryPlay from './components/ui/storyplay';
+import ThemeToggle from './components/ThemeToggle';
 
 export default function App() {
   return (
@@ -14,7 +15,10 @@ export default function App() {
             </div>
             <span className="font-semibold text-slate-800 dark:text-slate-100">Story Forge</span>
           </div>
-          <AuthButton />
+          <div className="flex items-center gap-4">
+            <AuthButton />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
