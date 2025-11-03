@@ -3,7 +3,7 @@ import { useAction } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AIAssistantProps {
   content: string;
@@ -15,6 +15,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<string>('');
   const [error, setError] = React.useState<string>('');
+
+  const [collapsed, setCollapsed] = React.useState(false);
 
   const suggestImprovements = useAction(api.ai.suggestImprovements);
   const rewriteContent = useAction(api.ai.rewriteContent);
@@ -114,9 +116,19 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   return (
     <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900">
       <CardHeader className="border-b border-purple-100 dark:border-purple-900">
-        <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
-          <Sparkles className="w-5 h-5" />
-          AI Assistant
+        <CardTitle className="flex items-center justify-between text-purple-700 dark:text-purple-300">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5" />
+            AI Assistant
+          </div>
+          <Button
+            onClick={() => setCollapsed(!collapsed)}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4 space-y-4">
@@ -138,7 +150,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
             </div>
           </div>
         )}
-        
+
         {/* Error Display */}
         {error && (
           <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
@@ -147,64 +159,68 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            onClick={() => { void handleSuggest(); }}
-            disabled={loading || !content.trim()}
-            variant="outline"
-            className="gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
-            Suggest
-          </Button>
-          <Button
-            onClick={() => { void handleRewrite('engaging'); }}
-            disabled={loading || !content.trim()}
-            variant="outline"
-            className="gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-            Rewrite
-          </Button>
-        </div>
+        {/* Collapsible Action Buttons */}
+        {!collapsed && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => { void handleSuggest(); }}
+                disabled={loading || !content.trim()}
+                variant="outline"
+                className="gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />}
+                Suggest
+              </Button>
+              <Button
+                onClick={() => { void handleRewrite('engaging'); }}
+                disabled={loading || !content.trim()}
+                variant="outline"
+                className="gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                Rewrite
+              </Button>
+            </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <Button
-            onClick={() => { void handleRewrite('mysterious'); }}
-            disabled={loading || !content.trim()}
-            size="sm"
-            variant="secondary"
-          >
-            Mystery
-          </Button>
-          <Button
-            onClick={() => { void handleRewrite('dramatic'); }}
-            disabled={loading || !content.trim()}
-            size="sm"
-            variant="secondary"
-          >
-            Dramatic
-          </Button>
-          <Button
-            onClick={() => { void handleRewrite('humorous'); }}
-            disabled={loading || !content.trim()}
-            size="sm"
-            variant="secondary"
-          >
-            Humor
-          </Button>
-        </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                onClick={() => { void handleRewrite('mysterious'); }}
+                disabled={loading || !content.trim()}
+                size="sm"
+                variant="secondary"
+              >
+                Mystery
+              </Button>
+              <Button
+                onClick={() => { void handleRewrite('dramatic'); }}
+                disabled={loading || !content.trim()}
+                size="sm"
+                variant="secondary"
+              >
+                Dramatic
+              </Button>
+              <Button
+                onClick={() => { void handleRewrite('humorous'); }}
+                disabled={loading || !content.trim()}
+                size="sm"
+                variant="secondary"
+              >
+                Humor
+              </Button>
+            </div>
 
-        <Button
-          onClick={() => { void handleGenerateChoices(); }}
-          disabled={loading || !content.trim()}
-          variant="outline"
-          className="w-full gap-2"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          Generate Choices
-        </Button>
+            <Button
+              onClick={() => { void handleGenerateChoices(); }}
+              disabled={loading || !content.trim()}
+              variant="outline"
+              className="w-full gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Generate Choices
+            </Button>
+          </>
+        )}
 
         {/* Result Display */}
         {result && (
