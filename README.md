@@ -31,7 +31,7 @@ cd StoryForge
 npm install
 ```
 
-# Store it securely in Convex’s environment storage
+Store it securely in Convex’s environment storage:
 Get an API Key from the [OpenAI Dashboard](https://platform.openai.com/api-keys).
 ``` bash
 npx convex env set OPENAI_API_KEY sk-your-openai-key-here
