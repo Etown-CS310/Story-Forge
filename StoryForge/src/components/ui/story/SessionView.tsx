@@ -131,7 +131,7 @@ function MessageList({ messages }: { messages: any[] }) {
       {messages.map((m) => (
         <React.Fragment key={m._id + '-frag'}>
           {m.edgeContent && <MessageBubble key={m._id + '-edge'} role="user" content={m.edgeContent} />}
-          <MessageBubble key={m._id} role={m.role} author={m.author} content={m.content} />
+          <MessageBubble key={m._id + '-msg'} role={m.role} author={m.author} content={m.content} />
         </React.Fragment>
       ))}
       <div ref={bottomRef} />
