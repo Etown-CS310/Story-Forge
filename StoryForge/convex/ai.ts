@@ -177,6 +177,9 @@ export const enhanceContent = action({
     }
 
     const data = await response.json();
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      throw new Error('OpenAI API response did not contain any choices.');
+    }
     return data.choices[0].message.content;
   },
 });
