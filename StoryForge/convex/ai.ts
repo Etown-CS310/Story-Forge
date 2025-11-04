@@ -67,6 +67,9 @@ export const suggestImprovements = action({
     }
 
     const data = await response.json();
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0 || !data.choices[0].message || !data.choices[0].message.content) {
+      throw new Error('OpenAI API response did not contain any choices or message content.');
+    }
     const suggestions = data.choices[0].message.content;
     
     // Now generate example edits based on the suggestions
