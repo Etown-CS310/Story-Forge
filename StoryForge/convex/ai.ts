@@ -217,7 +217,7 @@ export const generateChoices = action({
           },
           {
             role: 'user',
-            content: `Given this story text, suggest ${numChoices} interesting choices/branches the reader could make. Return as a JSON array of objects with "label" and "description" fields.\n\n${content}`,
+            content: `Given this story text, suggest ${numChoices} interesting choices/branches the reader could make. Return as a JSON object with a "choices" key containing an array of objects with "label" and "description" fields.\n\n${content}`,
           },
         ],
         temperature: 0.9,
@@ -232,6 +232,9 @@ export const generateChoices = action({
     }
 
     const data = await response.json();
-    return JSON.parse(data.choices[0].message.content);
+    const parsed = JSON.parse(data.choices[0].message.content);
+    
+    // Return the choices array from the object
+    return parsed.choices || parsed;
   },
 });
