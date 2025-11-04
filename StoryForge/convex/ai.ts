@@ -20,6 +20,24 @@ export const suggestImprovements = action({
   handler: async (_, { content }) => {
     const apiKey = getApiKey();
     
+    // Generate a random seed to ensure varied suggestions each time
+    const randomAspects = [
+      'pacing and rhythm',
+      'character depth and motivation', 
+      'sensory details and imagery',
+      'dialogue and voice',
+      'tension and conflict',
+      'world-building and atmosphere',
+      'emotional resonance',
+      'plot structure and flow',
+      'theme and symbolism',
+      'opening and closing impact'
+    ];
+    
+    // Randomly select 3 aspects to focus on
+    const shuffled = randomAspects.sort(() => Math.random() - 0.5);
+    const selectedAspects = shuffled.slice(0, 3).join(', ');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -31,15 +49,98 @@ export const suggestImprovements = action({
         messages: [
           {
             role: 'system',
-            content: 'You are a creative writing assistant. Provide concise suggestions to improve narrative text, focusing on clarity, engagement, and storytelling.',
+            content: `You are a creative writing assistant. Provide exactly 3 specific, actionable suggestions to improve narrative text. Focus your analysis on these aspects: ${selectedAspects}. Each suggestion should be concrete and different from each other.`,
           },
           {
             role: 'user',
-            content: `Suggest improvements for this story text:\n\n${content}`,
+            content: `Analyze this story text and provide exactly 3 distinct improvement suggestions:\n\n${content}`,
           },
         ],
-        temperature: 0.7,
+        temperature: 0.9,
         max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API request failed: ${error}`);
+    }
+
+    const data = await response.json();
+    const suggestions = data.choices[0].message.content;
+    
+    // Now generate example edits based on the suggestions
+    const exampleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a creative writing assistant. Given the original text and improvement suggestions, provide a revised version that demonstrates how to apply those suggestions.',
+          },
+          {
+            role: 'user',
+            content: `Original text:\n${content}\n\nSuggestions:\n${suggestions}\n\nPlease rewrite the text applying these suggestions. Show how the improvements enhance the narrative.`,
+          },
+        ],
+        temperature: 0.8,
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!exampleResponse.ok) {
+      const error = await exampleResponse.text();
+      throw new Error(`OpenAI API request failed: ${error}`);
+    }
+
+    const exampleData = await exampleResponse.json();
+    const exampleEdits = exampleData.choices[0].message.content;
+    
+    // Return as structured object with clear sections
+    return {
+      suggestions,
+      exampleEdits
+    };
+  },
+});
+
+export const rewriteContent = action({
+  args: {
+    content: v.string(),
+    tone: v.optional(v.string()),
+  },
+  handler: async (_, { content, tone }) => {
+    const apiKey = getApiKey();
+    
+    const systemContent = tone 
+      ? `You are a creative writing assistant. Rewrite the text in a ${tone} tone while preserving the core meaning and story beats.`
+      : 'You are a creative writing assistant. Rewrite the text in an engaging way while preserving the core meaning and story beats.';
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: systemContent,
+          },
+          {
+            role: 'user',
+            content: `Rewrite this:\n\n${content}`,
+          },
+        ],
+        temperature: 0.8,
+        max_tokens: 1000,
       }),
     });
 
@@ -53,12 +154,11 @@ export const suggestImprovements = action({
   },
 });
 
-export const rewriteContent = action({
+export const enhanceContent = action({
   args: {
     content: v.string(),
-    tone: v.optional(v.string()),
   },
-  handler: async (_, { content, tone = 'engaging' }) => {
+  handler: async (_, { content }) => {
     const apiKey = getApiKey();
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -72,15 +172,15 @@ export const rewriteContent = action({
         messages: [
           {
             role: 'system',
-            content: `You are a creative writing assistant. Rewrite the text in a ${tone} tone while preserving the core meaning and story beats.`,
+            content: 'You are a creative writing assistant. Expand and enhance the given text by adding more detail, depth, and narrative richness while maintaining the original tone and direction.',
           },
           {
             role: 'user',
-            content: `Rewrite this:\n\n${content}`,
+            content: `Enhance and expand this text by adding more detail and depth:\n\n${content}`,
           },
         ],
         temperature: 0.8,
-        max_tokens: 1000,
+        max_tokens: 1500,
       }),
     });
 
