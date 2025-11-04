@@ -169,8 +169,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
     try {
       const choices = await generateChoices({ content, numChoices: 3 });
-      if (choices.choices && Array.isArray(choices.choices)) {
-        setResult(`Generated ${choices.choices.length} choice suggestions. Click to add them below.`);
+      if (Array.isArray(choices)) {
+        setResult(`Generated ${choices.length} choice suggestions. Click to add them below.`);
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
