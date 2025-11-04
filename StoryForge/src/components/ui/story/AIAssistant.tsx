@@ -244,6 +244,9 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
           </Button>
         </CardTitle>
       </CardHeader>
+      
+      {/* Collapsible Section (Buttons + Results) */}
+      {!collapsed && (
       <CardContent className="pt-4 space-y-4">
         {/* Setup Instructions */}
         {apiKeyMissing && (
@@ -272,9 +275,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
           </div>
         )}
 
-        {/* Collapsible Action Buttons */}
-        {!collapsed && (
-          <>
+            {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={() => { void handleSuggest(); }}
@@ -342,73 +343,73 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               Generate Choices
             </Button>
-          </>
-        )}
 
-        {/* Suggestions Display - Separate Block */}
-        {suggestions && (
-          <div className="space-y-3">
-            <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2 mb-3">
-                <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                <h3 className="font-semibold text-amber-900 dark:text-amber-100">Improvement Suggestions</h3>
-              </div>
-              <div className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap">
-                {suggestions}
-              </div>
-            </div>
-
-            {/* Revised Text Block */}
-            {exampleEdits && parseRevisedText(exampleEdits) && (
-              <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <h3 className="font-semibold text-blue-900 dark:text-blue-100">Revised Text</h3>
+            {/* Suggestions, Revised Text, and Analysis */}
+            {suggestions && (
+              <div className="space-y-3">
+                {/* Suggestions */}
+                <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-100">Improvement Suggestions</h3>
+                  </div>
+                  <div className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap">
+                    {suggestions}
+                  </div>
                 </div>
-                <div className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
-                  {parseRevisedText(exampleEdits)}
+
+                {/* Revised Text */}
+                {exampleEdits && parseRevisedText(exampleEdits) && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">Revised Text</h3>
+                    </div>
+                    <div className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
+                      {parseRevisedText(exampleEdits)}
+                    </div>
+                    <Button
+                      onClick={() => onApplySuggestion(parseRevisedText(exampleEdits))}
+                      size="sm"
+                      className="w-full mt-3"
+                    >
+                      Apply Revised Text to Editor
+                    </Button>
+                  </div>
+                )}
+
+                {/* Analysis */}
+                {exampleEdits && parseAnalysis(exampleEdits) && (
+                  <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <h3 className="font-semibold text-green-900 dark:text-green-100">Analysis of Improvements</h3>
+                    </div>
+                    <div className="text-sm text-green-900 dark:text-green-100 whitespace-pre-wrap">
+                      {parseAnalysis(exampleEdits)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rewrite / Enhance Results */}
+            {result && (
+              <div className="p-4 rounded-lg bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-3">
+                <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                  {result}
                 </div>
                 <Button
-                  onClick={() => onApplySuggestion(parseRevisedText(exampleEdits))}
+                  onClick={() => onApplySuggestion(result)}
                   size="sm"
-                  className="w-full mt-3"
+                  className="w-full"
                 >
-                  Apply Revised Text to Editor
+                  Apply to Editor
                 </Button>
               </div>
             )}
-
-            {/* Analysis Block */}
-            {exampleEdits && parseAnalysis(exampleEdits) && (
-              <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <h3 className="font-semibold text-green-900 dark:text-green-100">Analysis of Improvements</h3>
-                </div>
-                <div className="text-sm text-green-900 dark:text-green-100 whitespace-pre-wrap">
-                  {parseAnalysis(exampleEdits)}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Regular Result Display (for Rewrite, Enhance, etc.) */}
-        {result && (
-          <div className="p-4 rounded-lg bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-3">
-            <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-              {result}
-            </div>
-            <Button
-              onClick={() => onApplySuggestion(result)}
-              size="sm"
-              className="w-full"
-            >
-              Apply to Editor
-            </Button>
-          </div>
-        )}
       </CardContent>
+      )}
     </Card>
   );
 }
