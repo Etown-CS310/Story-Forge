@@ -39,7 +39,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       }
     };
     void checkAPIKey();
-  }, []);
+  }, [suggestImprovements]);
 
   const handleSuggest = async () => {
     if (!content.trim()) {
