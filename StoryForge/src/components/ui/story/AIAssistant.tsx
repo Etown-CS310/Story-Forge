@@ -163,6 +163,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
     setLoading(true);
     setError('');
+    setResult('');
     setSuggestions('');
     setExampleEdits('');
 
