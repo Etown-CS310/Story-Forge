@@ -13,31 +13,6 @@ function getApiKey() {
   return apiKey;
 }
 
-export const suggestImprovements = action({
-  args: {
-    content: v.string(),
-  },
-  handler: async (_, { content }) => {
-    const apiKey = getApiKey();
-    
-    // Generate a random seed to ensure varied suggestions each time
-    const randomAspects = [
-      'pacing and rhythm',
-      'character depth and motivation', 
-      'sensory details and imagery',
-      'dialogue and voice',
-      'tension and conflict',
-      'world-building and atmosphere',
-      'emotional resonance',
-      'plot structure and flow',
-      'theme and symbolism',
-      'opening and closing impact'
-    ];
-    
-    // Randomly select 3 aspects to focus on
-    const shuffled = randomAspects.sort(() => Math.random() - 0.5);
-    const selectedAspects = shuffled.slice(0, 3).join(', ');
-    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -67,6 +42,9 @@ export const suggestImprovements = action({
     }
 
     const data = await response.json();
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0 || !data.choices[0].message || !data.choices[0].message.content) {
+      throw new Error('OpenAI API response did not contain any choices or message content.');
+    }
     const suggestions = data.choices[0].message.content;
     
     // Now generate example edits based on the suggestions
@@ -99,6 +77,15 @@ export const suggestImprovements = action({
     }
 
     const exampleData = await exampleResponse.json();
+    if (
+      !exampleData.choices ||
+      !Array.isArray(exampleData.choices) ||
+      exampleData.choices.length === 0 ||
+      !exampleData.choices[0].message ||
+      typeof exampleData.choices[0].message.content !== "string"
+    ) {
+      throw new Error("OpenAI API response missing choices or message content for example edits.");
+    }
     const exampleEdits = exampleData.choices[0].message.content;
     
     // Return as structured object with clear sections
@@ -190,6 +177,9 @@ export const enhanceContent = action({
     }
 
     const data = await response.json();
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      throw new Error('OpenAI API response did not contain any choices.');
+    }
     return data.choices[0].message.content;
   },
 });
