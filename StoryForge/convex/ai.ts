@@ -13,31 +13,6 @@ function getApiKey() {
   return apiKey;
 }
 
-export const suggestImprovements = action({
-  args: {
-    content: v.string(),
-  },
-  handler: async (_, { content }) => {
-    const apiKey = getApiKey();
-    
-    // Generate a random seed to ensure varied suggestions each time
-    const randomAspects = [
-      'pacing and rhythm',
-      'character depth and motivation', 
-      'sensory details and imagery',
-      'dialogue and voice',
-      'tension and conflict',
-      'world-building and atmosphere',
-      'emotional resonance',
-      'plot structure and flow',
-      'theme and symbolism',
-      'opening and closing impact'
-    ];
-    
-    // Randomly select 3 aspects to focus on
-    const shuffled = randomAspects.sort(() => Math.random() - 0.5);
-    const selectedAspects = shuffled.slice(0, 3).join(', ');
-    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
