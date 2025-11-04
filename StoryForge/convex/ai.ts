@@ -189,7 +189,16 @@ export const enhanceContent = action({
           },
         ],
         temperature: 0.8,
-        max_tokens: 1500,
+    const data = await response.json();
+    if (
+      !data ||
+      !Array.isArray(data.choices) ||
+      data.choices.length === 0 ||
+      !data.choices[0].message ||
+      typeof data.choices[0].message.content !== 'string'
+    ) {
+      throw new Error('Unexpected response structure from OpenAI API');
+    }
       }),
     });
 
