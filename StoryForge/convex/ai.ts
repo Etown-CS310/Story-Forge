@@ -99,6 +99,15 @@ export const suggestImprovements = action({
     }
 
     const exampleData = await exampleResponse.json();
+    if (
+      !exampleData.choices ||
+      !Array.isArray(exampleData.choices) ||
+      exampleData.choices.length === 0 ||
+      !exampleData.choices[0].message ||
+      !exampleData.choices[0].message.content
+    ) {
+      throw new Error('OpenAI API response did not contain any choices or message content for example edits.');
+    }
     const exampleEdits = exampleData.choices[0].message.content;
     
     // Return as structured object with clear sections
