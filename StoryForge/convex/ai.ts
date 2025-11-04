@@ -224,7 +224,7 @@ export const generateChoices = action({
     const data = await response.json();
     const parsed = JSON.parse(data.choices[0].message.content);
     
-    // Return the choices array from the object
-    return parsed.choices || parsed;
+    // Return the parsed object, which should have a 'choices' property
+    return parsed;
   },
 });
