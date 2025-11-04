@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network, Maximize2, Minimize2 } from 'lucide-react';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 
@@ -22,6 +22,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [nodeContent, setNodeContent] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
+  const [isFullHeight, setIsFullHeight] = React.useState(false);
 
   React.useEffect(() => {
     if (!graph) return;
@@ -60,17 +61,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
           {/* View mode toggle */}
           <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-1 bg-slate-50 dark:bg-slate-800">
             <button
-              onClick={() => setViewMode('edit')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
-                viewMode === 'edit'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Edit className="w-3.5 h-3.5" />
-              Edit
-            </button>
-            <button
               onClick={() => setViewMode('graph')}
               className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
                 viewMode === 'graph'
@@ -80,6 +70,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
             >
               <Network className="w-3.5 h-3.5" />
               Graph
+            </button>
+            <button
+              onClick={() => setViewMode('edit')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                viewMode === 'edit'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <Edit className="w-3.5 h-3.5" />
+              Edit
             </button>
           </div>
           <Button variant="outline" onClick={onClose} className="gap-2">
@@ -95,8 +96,32 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
           <div className="grid md:grid-cols-3 gap-6">
             {/* Left: node list */}
             <div className="space-y-3">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nodes</div>
-              <ScrollArea className="h-96 rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nodes</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFullHeight(!isFullHeight)}
+                  className="gap-1.5 h-7 text-xs"
+                >
+                  {isFullHeight ? (
+                    <>
+                      <Minimize2 className="w-3 h-3" />
+                      Normal
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-3 h-3" />
+                      Expand
+                    </>
+                  )}
+                </Button>
+              </div>
+              <ScrollArea 
+                className={`rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ${
+                  isFullHeight ? 'h-[calc(100vh-300px)]' : 'h-96'
+                }`}
+              >
                 <div className="space-y-2">
                   {graph.nodes.map((n: any) => (
                     <button
@@ -125,14 +150,14 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
               />
-                              <AIAssistant
-                  content={nodeContent}
-                  onApplySuggestion={(newContent) => setNodeContent(newContent)}
-                  onGenerateChoice={(label, description) => {
-                    setNewChoiceLabel(label);
-                    setNewNodeContent(description);
-                  }}
-                />
+              <AIAssistant
+                content={nodeContent}
+                onApplySuggestion={(newContent) => setNodeContent(newContent)}
+                onGenerateChoice={(label, description) => {
+                  setNewChoiceLabel(label);
+                  setNewNodeContent(description);
+                }}
+              />
               <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {

@@ -123,24 +123,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         </div>
       </div>
 
-      <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
-        <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-3">Icons</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🏁</span>
-            <span className="text-slate-600 dark:text-slate-400">Root/Start</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">📖</span>
-            <span className="text-slate-600 dark:text-slate-400">Narrator</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">💬</span>
-            <span className="text-slate-600 dark:text-slate-400">Character</span>
-          </div>
-        </div>
-      </div>
-
       <div className="bg-white dark:bg-slate-800 rounded-lg border-2 border-slate-200 dark:border-slate-700 p-6 overflow-x-auto">
         {loading && (
           <div className="flex items-center justify-center p-12">
