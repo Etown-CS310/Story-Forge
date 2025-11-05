@@ -203,6 +203,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     onChange={(e) => setNewNodeContent(e.target.value)}
                   />
                   <Button
+                    disabled={!newChoiceLabel.trim() || !newNodeContent.trim()}
                     onClick={() => {
                       void (async () => {
                         if (!selectedNodeId) return;
@@ -214,7 +215,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         setNewNodeContent('');
                       })();
                     }}
-                    className="gap-2 w-full bg-blue-600 hover:bg-blue-700"
+                    className="gap-2 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
                     Add Choice → New Node
@@ -282,8 +283,7 @@ function ExistingEdgeCreator({
               console.error('Failed to create edge:', error);
             });
         }}
-        className="gap-2 w-full"
-        variant="secondary"
+        className="gap-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:dark:bg-blue-800 disabled:cursor-not-allowed"
       >
         <Link className="w-4 h-4" />
         Link Edge

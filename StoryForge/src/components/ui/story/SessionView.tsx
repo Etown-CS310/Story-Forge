@@ -9,7 +9,7 @@ import { Play } from 'lucide-react';
 
 export default function SessionView({
   sessionId,
-  closeActiveSession,
+  closeActiveSession = (_id: Id<'sessions'> | null) => null,
 }: {
   sessionId: Id<'sessions'>;
   closeActiveSession: (id: Id<'sessions'> | null) => void;
@@ -107,7 +107,7 @@ export default function SessionView({
                   onClick={() => {
                     void choose({ sessionId, edgeId: c._id });
                   }}
-                  className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:border-blue-300 dark:hover:border-blue-700 transition-all text-left"
+                  className="hover:bg-blue-100 dark:hover:bg-blue-900 hover:border-blue-300 dark:hover:border-blue-700 transition-all"
                 >
                   {c.label}
                 </Button>
@@ -129,9 +129,9 @@ function MessageList({ messages }: { messages: any[] }) {
   return (
     <div className="space-y-3">
       {messages.map((m) => (
-        <React.Fragment key={m._id}>
+        <React.Fragment key={m._id + '-frag'}>
           {m.edgeContent && <MessageBubble key={m._id + '-edge'} role="user" content={m.edgeContent} />}
-          <MessageBubble key={m._id} role={m.role} author={m.author} content={m.content} />
+          <MessageBubble key={m._id + '-msg'} role={m.role} author={m.author} content={m.content} />
         </React.Fragment>
       ))}
       <div ref={bottomRef} />
