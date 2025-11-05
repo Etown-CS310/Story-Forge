@@ -83,6 +83,10 @@ export const suggestImprovements = action({
       }),
     });
 
+    if (!exampleResponse.ok) {
+      const errorText = await exampleResponse.text();
+      throw new Error(`OpenAI API (example) request failed: ${exampleResponse.status} ${exampleResponse.statusText} - ${errorText}`);
+    }
     const exampleData = await exampleResponse.json();
     const exampleEdits = exampleData.choices?.[0]?.message?.content ?? '';
 
