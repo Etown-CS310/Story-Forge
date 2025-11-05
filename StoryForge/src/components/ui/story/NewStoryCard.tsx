@@ -37,7 +37,7 @@ export default function NewStoryCard() {
         <textarea
           className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           rows={4}
-          placeholder="Opening scene / root node content…"
+          placeholder="Opening scene content…"
           value={rootContent}
           onChange={(e) => setRootContent(e.target.value)}
         />
