@@ -46,7 +46,8 @@ export default function StoryRow({
               }
             })();
           }}
-          className="gap-2 bg-blue-600 hover:bg-blue-700"
+          variant="blue"
+          className="gap-2"
         >
           <Play className="w-4 h-4" />
           {creating ? 'Starting…' : 'Start'}

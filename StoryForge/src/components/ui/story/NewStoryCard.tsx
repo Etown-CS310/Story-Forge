@@ -69,7 +69,8 @@ export default function NewStoryCard() {
               setSubmitting(false);
             })();
           }}
-          className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
+          variant="blue"
+          className="w-full gap-2 "
         >
           <Plus className="w-4 h-4" />
           {submitting ? 'Creating…' : 'Create Story'}
