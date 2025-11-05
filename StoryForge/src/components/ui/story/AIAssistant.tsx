@@ -20,11 +20,27 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [error, setError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
   const [collapsed, setCollapsed] = React.useState(false);
+  const [apiKeyMissing, setApiKeyMissing] = React.useState(false);
 
   const suggestImprovements = useAction(api.ai.suggestImprovements);
   const rewriteContent = useAction(api.ai.rewriteContent);
   const enhanceContent = useAction(api.ai.enhanceContent);
   const generateChoices = useAction(api.ai.generateChoices);
+
+  React.useEffect(() => {
+    const checkAPIKey = async () => {
+      try {
+        await suggestImprovements({ content: '' });
+        setApiKeyMissing(false);
+      } catch (err: any) {
+        if (err.message?.includes('OPENAI_API_KEY')) {
+          setApiKeyMissing(true);
+        }
+      }
+    };
+    void checkAPIKey();
+  }, [suggestImprovements]);
+
   const handleSuggest = async () => {
     if (!content.trim()) {
       setError('No content to analyze');
