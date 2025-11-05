@@ -169,8 +169,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
     try {
       const choices = await generateChoices({ content, numChoices: 3 });
-      if (Array.isArray(choices)) {
-        setResult(`Generated ${choices.length} choice suggestions. Click to add them below.`);
+      if (choices.choices && Array.isArray(choices.choices)) {
+        setResult(`Generated ${choices.choices.length} choice suggestions. Click to add them below.`);
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -208,21 +208,21 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   };
 
   return (
-      <CardHeader className="border-b border-purple-100 dark:border-purple-900 !py-2 flex items-center justify-between">
-        <CardTitle className="flex items-center text-purple-700 dark:text-purple-300">
+    <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900">
+      <CardHeader className="border-b border-purple-100 dark:border-purple-900 !py-2">
+        <CardTitle className="flex items-center justify-between text-purple-700 dark:text-purple-300">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5" />
             AI Assistant
           </div>
-        </CardTitle>
-        <Button
-          onClick={() => setCollapsed(!collapsed)}
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-        >
-          {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-        </Button>
+          <Button
+            onClick={() => setCollapsed(!collapsed)}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+          >
+            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </Button>
         </CardTitle>
       </CardHeader>
 
