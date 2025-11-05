@@ -117,7 +117,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   )}
                 </Button>
               </div>
-              <ScrollArea 
+              <ScrollArea
                 className={`rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ${
                   isFullHeight ? 'h-[calc(100vh-300px)]' : 'h-96'
                 }`}
@@ -166,7 +166,8 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                       await updateNode({ nodeId: selectedNodeId, content: nodeContent });
                     })();
                   }}
-                  className="gap-2 bg-blue-600 hover:bg-blue-700"
+                  variant="blue"
+                  className="gap-2"
                 >
                   <Save className="w-4 h-4" />
                   Save Node
@@ -249,7 +250,8 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         setNewNodeContent('');
                       })();
                     }}
-                    className="gap-2 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="blue"
+                    className="gap-2 w-full"
                   >
                     <Plus className="w-4 h-4" />
                     Add Choice → New Node
@@ -317,7 +319,8 @@ function ExistingEdgeCreator({
               console.error('Failed to create edge:', error);
             });
         }}
-        className="gap-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:dark:bg-blue-800 disabled:cursor-not-allowed"
+        variant="blue"
+        className="gap-2 w-full disabled:cursor-not-allowed"
       >
         <Link className="w-4 h-4" />
         Link Edge
