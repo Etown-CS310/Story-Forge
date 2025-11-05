@@ -60,6 +60,10 @@ export const suggestImprovements = action({
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
+    }
     const data = await response.json();
     const suggestionsText = data.choices?.[0]?.message?.content ?? '';
 
