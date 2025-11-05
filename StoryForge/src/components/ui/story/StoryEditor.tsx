@@ -320,7 +320,7 @@ function ExistingEdgeCreator({
             });
         }}
         variant="blue"
-        className="gap-2 w-full disabled:cursor-not-allowed"
+        className="gap-2 w-full"
       >
         <Link className="w-4 h-4" />
         Link Edge
