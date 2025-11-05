@@ -208,7 +208,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   };
 
   return (
-<Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900">
+    <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900">
       <CardHeader className="border-b border-purple-100 dark:border-purple-900 !py-2">
         <CardTitle className="flex items-center justify-between text-purple-700 dark:text-purple-300">
           <div className="flex items-center gap-2">
