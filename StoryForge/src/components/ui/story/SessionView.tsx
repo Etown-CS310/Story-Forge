@@ -9,7 +9,7 @@ import { Play } from 'lucide-react';
 
 export default function SessionView({
   sessionId,
-  closeActiveSession = () => null,
+  closeActiveSession = (_id: Id<'sessions'> | null) => null,
 }: {
   sessionId: Id<'sessions'>;
   closeActiveSession: (id: Id<'sessions'> | null) => void;
