@@ -97,7 +97,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
             {/* Left: node list */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Nodes</div>
+                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Scenes</div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -143,7 +143,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
             {/* Middle: edit node */}
             <div className="space-y-4 md:col-span-2">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Selected Node</div>
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Selected Scene</div>
               <textarea
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 rows={8}
@@ -169,11 +169,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   className="gap-2 bg-blue-600 hover:bg-blue-700"
                 >
                   <Save className="w-4 h-4" />
-                  Save Node
+                  Save Scene
                 </Button>
                 {selectedNodeId && selectedNodeId === graph.rootNodeId && (
                   <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">
-                    Root Node
+                    Root
                   </span>
                 )}
               </div>
@@ -222,17 +222,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 <div className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    Add Branch
+                    Add Scene
                   </div>
                   <Input
-                    placeholder="Choice label"
+                    placeholder="Path Label"
                     value={newChoiceLabel}
                     onChange={(e) => setNewChoiceLabel(e.target.value)}
                   />
                   <textarea
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     rows={4}
-                    placeholder="New node content…"
+                    placeholder="New scene content…"
                     value={newNodeContent}
                     onChange={(e) => setNewNodeContent(e.target.value)}
                   />
@@ -252,7 +252,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     className="gap-2 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
-                    Add Choice → New Node
+                    Create New Path and Scene
                   </Button>
 
                   {/* Or connect to existing node */}
@@ -290,21 +290,21 @@ function ExistingEdgeCreator({
     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
       <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
         <Link className="w-3.5 h-3.5" />
-        Or link to an existing node:
+        Or link to an existing scene:
       </div>
       <select
         className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2.5 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
         value={toNodeId}
         onChange={(e) => setToNodeId(e.target.value)}
       >
-        <option value="">— Select node —</option>
+        <option value="">— Select scene —</option>
         {options.map((n) => (
           <option key={n._id} value={n._id}>
             {(n.content ?? '').slice(0, 80)}
           </option>
         ))}
       </select>
-      <Input placeholder="Choice label" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <Input placeholder="Path Label" value={label} onChange={(e) => setLabel(e.target.value)} />
       <Button
         disabled={!toNodeId || !label.trim()}
         onClick={() => {
@@ -320,7 +320,7 @@ function ExistingEdgeCreator({
         className="gap-2 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:dark:bg-blue-800 disabled:cursor-not-allowed"
       >
         <Link className="w-4 h-4" />
-        Link Edge
+        Link to Scene
       </Button>
     </div>
   );
