@@ -1,6 +1,7 @@
 // convex/schema.ts
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
+import { title } from 'process';
 
 export default defineSchema({
   numbers: defineTable({
@@ -32,6 +33,7 @@ export default defineSchema({
     storyId: v.id('stories'),
     // node “content” is the canonical message at that step
     role: v.string(), // "system" | "narrator" | "character" | "user" | "ai"
+    title: v.optional(v.string()), // short title for authors to identify nodes
     content: v.string(), // rich text or markdown string; keep assets in storage table
     // optional metadata to drive UI or AI prompts
     metadata: v.optional(v.any()), // e.g., characterId, mood, variables to set, etc.

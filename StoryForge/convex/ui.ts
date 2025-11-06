@@ -72,6 +72,13 @@ export const updateNodeContent = mutation({
   },
 });
 
+export const updateNodeTitle = mutation({
+  args: { nodeId: v.id('nodes'), title: v.string() },
+  handler: async (ctx, { nodeId, title }) => {
+    await ctx.db.patch(nodeId, { title });
+  },
+});
+
 export const createNodeAndEdge = mutation({
   args: { storyId: v.id('stories'), fromNodeId: v.id('nodes'), label: v.string(), content: v.string() },
   handler: async (ctx, { storyId, fromNodeId, label, content }) => {
@@ -288,8 +295,9 @@ export const createStory = mutation({
     summary: v.optional(v.string()),
     rootContent: v.string(), // first node content
     isPublic: v.boolean(),
+    rootNodeTitle: v.optional(v.string()),
   },
-  handler: async (ctx, { title, summary, rootContent, isPublic }) => {
+  handler: async (ctx, { title, summary, rootContent, isPublic, rootNodeTitle }) => {
     // assumes you have a `me(ctx)` helper that returns the current user doc
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error('Unauthorized');
@@ -314,8 +322,9 @@ export const createStory = mutation({
     // 2) seed the root node
     const rootNodeId = await ctx.db.insert('nodes', {
       storyId,
-      role: 'narrator', // or "system"/"character"
+      role: 'narrator',
       content: rootContent,
+      title: rootNodeTitle || 'Opening Scene',
       metadata: {},
       version: 1,
       createdBy: user._id,

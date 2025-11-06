@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react';
 export default function NewStoryCard() {
   const createStory = useMutation(api.ui.createStory);
   const [title, setTitle] = React.useState('');
+  const [nodeTitle, setNodeTitle] = React.useState('');
   const [summary, setSummary] = React.useState('');
   const [rootContent, setRootContent] = React.useState('');
   const [isPublic, setIsPublic] = React.useState(false);
@@ -32,6 +33,12 @@ export default function NewStoryCard() {
           placeholder="Short summary (optional)"
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
+          className="bg-white dark:bg-slate-800"
+        />
+        <Input
+          placeholder="Opening scene title"
+          value={nodeTitle}
+          onChange={(e) => setNodeTitle(e.target.value)}
           className="bg-white dark:bg-slate-800"
         />
         <textarea
@@ -61,6 +68,7 @@ export default function NewStoryCard() {
                 summary: summary.trim() || undefined,
                 rootContent: rootContent.trim(),
                 isPublic,
+                rootNodeTitle: nodeTitle.trim(),
               });
               setTitle('');
               setSummary('');
