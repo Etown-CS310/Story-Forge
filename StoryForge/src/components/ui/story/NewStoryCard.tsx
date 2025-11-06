@@ -71,6 +71,7 @@ export default function NewStoryCard() {
                 rootNodeTitle: nodeTitle.trim(),
               });
               setTitle('');
+              setNodeTitle('');
               setSummary('');
               setRootContent('');
               setIsPublic(false);
