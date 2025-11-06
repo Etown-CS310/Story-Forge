@@ -122,7 +122,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               </div>
               <ScrollArea
                 className={`rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ${
-                  isFullHeight ? 'h-192' : 'h-96'
+                  isFullHeight ? 'h-[48rem]' : 'h-96'
                 }`}
               >
                 <div className="space-y-2">

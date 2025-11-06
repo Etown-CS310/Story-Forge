@@ -68,7 +68,7 @@ export default function NewStoryCard() {
                 summary: summary.trim() || undefined,
                 rootContent: rootContent.trim(),
                 isPublic,
-                rootNodeTitle: nodeTitle.trim(),
+                rootNodeTitle: nodeTitle.trim() || undefined,
               });
               setTitle('');
               setNodeTitle('');
