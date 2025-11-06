@@ -14,12 +14,14 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
   const createNodeAndEdge = useMutation(api.ui.createNodeAndEdge);
   const updateNode = useMutation(api.ui.updateNodeContent);
+  const updateNodeTitle = useMutation(api.ui.updateNodeTitle);
   const createEdge = useMutation(api.ui.createEdge);
   const deleteEdge = useMutation(api.ui.deleteEdge);
 
   const [viewMode, setViewMode] = React.useState<'edit' | 'graph'>('graph');
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
   const [nodeContent, setNodeContent] = React.useState('');
+  const [nodeTitle, setNodeTitle] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
@@ -29,6 +31,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     if (!selectedNodeId && graph.rootNodeId) setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
     const sel = graph.nodes.find((n: any) => n._id === selectedNodeId);
     setNodeContent(sel?.content ?? '');
+    setNodeTitle(sel?.title ?? '');
   }, [graph, selectedNodeId]);
 
   if (!graph)
@@ -119,7 +122,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               </div>
               <ScrollArea
                 className={`rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ${
-                  isFullHeight ? 'h-[calc(100vh-300px)]' : 'h-96'
+                  isFullHeight ? 'h-[48rem]' : 'h-96'
                 }`}
               >
                 <div className="space-y-2">
@@ -133,7 +136,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                       }`}
                       onClick={() => setSelectedNodeId(n._id)}
                     >
-                      <div className="font-medium truncate text-slate-800 dark:text-white">{n.role}</div>
+                      <div className="font-medium truncate text-slate-800 dark:text-white">{n.title}</div>
                       <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">{n.content}</div>
                     </button>
                   ))}
@@ -144,6 +147,30 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
             {/* Middle: edit node */}
             <div className="space-y-4 md:col-span-2">
               <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Selected Scene</div>
+              <div className="flex items-center gap-3 col-span-2">
+                <Input
+                  type="text"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  placeholder="Scene Title"
+                  value={nodeTitle}
+                  onChange={(e) => {
+                    setNodeTitle(e.target.value);
+                  }}
+                />
+                <Button
+                  variant="blue"
+                  className="gap-2"
+                  onClick={() => {
+                    void (async () => {
+                      if (!selectedNodeId) return;
+                      await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
+                    })();
+                  }}
+                >
+                  <Save className="w-4 h-4" />
+                  Save Title
+                </Button>
+              </div>
               <textarea
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 rows={8}
