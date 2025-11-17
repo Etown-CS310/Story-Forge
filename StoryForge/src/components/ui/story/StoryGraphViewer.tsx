@@ -13,7 +13,29 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   
-  const data = useQuery(api.queries.visualization.getStoryMermaid, { storyId });
+  // Track dark mode in state so it triggers re-render
+  const [isDarkMode, setIsDarkMode] = useState(
+    document.documentElement.classList.contains('dark')
+  );
+  
+  // Watch for dark mode changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+  
+  const data = useQuery(api.queries.visualization.getStoryMermaid, { 
+    storyId,
+    isDarkMode 
+  });
 
   useEffect(() => {
     if (!data || !mermaidRef.current) return;
@@ -25,10 +47,31 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         
         mermaid.initialize({ 
           startOnLoad: false,
-          theme: 'default',
+          theme: isDarkMode ? 'dark' : 'default',
+          themeVariables: isDarkMode ? {
+            // Dark mode specific colors for better visibility
+            primaryColor: '#1e293b',
+            primaryTextColor: '#e2e8f0',
+            primaryBorderColor: '#475569',
+            lineColor: '#94a3b8',
+            secondaryColor: '#334155',
+            tertiaryColor: '#0f172a',
+            background: '#0f172a',
+            mainBkg: '#1e293b',
+            secondBkg: '#334155',
+            edgeLabelBackground: '#1e293b',
+            nodeBorder: '#64748b',
+            clusterBkg: '#1e293b',
+            clusterBorder: '#475569',
+            defaultLinkColor: '#94a3b8',
+            titleColor: '#e2e8f0',
+            nodeTextColor: '#e2e8f0',
+          } : {},
           flowchart: {
             curve: 'basis',
-            padding: 20
+            padding: 20,
+            nodeSpacing: 50,
+            rankSpacing: 50,
           }
         });
 
@@ -45,7 +88,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     };
 
     void renderMermaid();
-  }, [data]);
+  }, [data, isDarkMode]);
 
   const copyToClipboard = () => {
     if (data) {

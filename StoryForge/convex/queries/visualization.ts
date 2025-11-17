@@ -3,8 +3,8 @@ import { query } from '../_generated/server';
 import { v } from 'convex/values';
 
 export const getStoryMermaid = query({
-  args: { storyId: v.id('stories') },
-  handler: async (ctx, { storyId }) => {
+  args: { storyId: v.id('stories'), isDarkMode: v.optional(v.boolean()) },
+  handler: async (ctx, { storyId, isDarkMode }) => {
     const story = await ctx.db.get(storyId);
     if (!story) throw new Error('Story not found');
     
@@ -22,13 +22,16 @@ export const getStoryMermaid = query({
     
     for (const node of nodes) {
       const nodeId = sanitizeId(node._id);
-      const truncatedContent = truncate(node.content, 40);
+      // Use title if available, otherwise fallback to truncated content
+      const displayText = node.title 
+        ? truncate(node.title, 40) 
+        : truncate(node.content, 40);
       const isRoot = story.rootNodeId === node._id;
       
       if (isRoot) {
-        mermaid += `  ${nodeId}[["🏁 ${truncatedContent}"]]\n`;
+        mermaid += `  ${nodeId}[["🏁 ${displayText}"]]\n`;
       } else {
-        mermaid += `  ${nodeId}["${truncatedContent}"]\n`;
+        mermaid += `  ${nodeId}["${displayText}"]\n`;
       }
     }
     
@@ -47,7 +50,14 @@ export const getStoryMermaid = query({
     }
     
     if (story.rootNodeId) {
-      mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#90EE90,stroke:#2E8B57,stroke-width:3px\n`;
+      // Use different colors for dark mode vs light mode
+      if (isDarkMode) {
+        // Dark mode: Darker green background with bright green border for visibility
+        mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#15803d,stroke:#22c55e,stroke-width:3px,color:#dcfce7\n`;
+      } else {
+        // Light mode: Original bright light green
+        mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#86efac,stroke:#16a34a,stroke-width:3px,color:#052e16\n`;
+      }
     }
     
     return {
