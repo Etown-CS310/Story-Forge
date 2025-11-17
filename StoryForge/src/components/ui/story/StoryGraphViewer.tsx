@@ -155,10 +155,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   }, [baseScale]);
 
   // This is now handled by the native event listener
-  // Keeping this for reference but it's not called anymore
-  const handleWheel = (e: React.WheelEvent) => {
-    // Moved to native listener for better control
-  };
 
   // Handle mouse drag
   const handleMouseDown = (e: React.MouseEvent) => {
