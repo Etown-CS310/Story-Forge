@@ -26,6 +26,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
+  
+  // Ref for scrolling to the Add Scene section
+  const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
 
   // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
   const aiAssistantKey = selectedNodeId ?? 'no-node';
@@ -184,10 +187,22 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               <AIAssistant
                 key={aiAssistantKey}
                 content={nodeContent}
-                onApplySuggestion={(newContent) => setNodeContent(newContent)}
+                onApplySuggestion={(newContent, newTitle) => {
+                  setNodeContent(newContent);
+                  if (newTitle) {
+                    setNodeTitle(newTitle);
+                  }
+                }}
                 onGenerateChoice={(label, description) => {
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
+                  // Scroll to the Add Scene section
+                  setTimeout(() => {
+                    addSceneSectionRef.current?.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'start' 
+                    });
+                  }, 100);
                 }}
               />
               <div className="flex gap-3 items-center">
@@ -252,10 +267,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 </div>
 
                 {/* Create new node + edge */}
-                <div className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
+                <div ref={addSceneSectionRef} className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    Add Scene
+                    Add New Scene
                   </div>
                   <Input
                     placeholder="Path Label"
@@ -321,7 +336,7 @@ function ExistingEdgeCreator({
 
   return (
     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
-      <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+      <div className="text-sm font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-2">
         <Link className="w-3.5 h-3.5" />
         Or link to an existing scene:
       </div>

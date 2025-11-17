@@ -8,7 +8,7 @@ import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronU
 
 interface AIAssistantProps {
   content: string;
-  onApplySuggestion: (newContent: string) => void;
+  onApplySuggestion: (newContent: string, newTitle?: string) => void;
   onGenerateChoice: (label: string, description: string) => void;
 }
 
@@ -69,7 +69,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         setSuggestions(response.suggestions);
         setExampleEdits(response.exampleEdits);
       } else {
-        setSuggestions(typeof response === 'string' ? response : JSON.stringify(response, null, 2));
+        setSuggestions(typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response));
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -224,9 +224,18 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       line.length > 100 &&
       !line.startsWith('**') &&
       !line.match(/^\d+\./) &&
-      !line.match(/^Revised [Tt]ext:/i)
+      !line.match(/^Revised [Tt]ext:/i) &&
+      !line.match(/^Scene Title:/i)
     );
     return storyPart ? storyPart.replace(/^Revised [Tt]ext:\s*/i, '') : text;
+  };
+
+  const parseSceneTitle = (text: string) => {
+    const titleMatch = text.match(/\*\*Scene Title:\*\*\s*(.+?)(?:\n|$)/i);
+    if (titleMatch) {
+      return titleMatch[1].trim();
+    }
+    return undefined;
   };
 
   const parseAnalysis = (text: string) => {
@@ -322,7 +331,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
             <div className="flex gap-2">
               <Input
                 type="text"
-                placeholder="# of paragraphs"
+                placeholder="e.g. 2-3, 1-2, 3-5 paragraphs"
                 value={expandLength}
                 onChange={(e) => setExpandLength(e.target.value)}
                 disabled={loading}
@@ -381,10 +390,18 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                     <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <h3 className="font-semibold text-blue-900 dark:text-blue-100">Revised Text</h3>
                   </div>
+                  {parseSceneTitle(exampleEdits) && (
+                    <div className="mb-3 p-2 bg-blue-100 dark:bg-blue-900 rounded border border-blue-300 dark:border-blue-700">
+                      <div className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">Suggested Scene Title:</div>
+                      <div className="text-sm text-blue-900 dark:text-blue-100 font-semibold">
+                        {parseSceneTitle(exampleEdits)}
+                      </div>
+                    </div>
+                  )}
                   <div className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
                     {parseRevisedText(exampleEdits)}
                   </div>
-                  <Button onClick={() => onApplySuggestion(parseRevisedText(exampleEdits))} size="sm" className="w-full mt-3">
+                  <Button onClick={() => onApplySuggestion(parseRevisedText(exampleEdits), parseSceneTitle(exampleEdits))} size="sm" className="w-full mt-3">
                     Apply Revised Text to Editor
                   </Button>
                 </div>

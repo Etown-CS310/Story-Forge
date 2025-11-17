@@ -68,7 +68,13 @@ export const suggestImprovements = action({
     const suggestionsText = data.choices?.[0]?.message?.content ?? '';
 
     // Generate example rewritten text
-    const examplePrompt = `Using the same aspects (${aspects}), rewrite a short example of the input text (2–3 sentences) that demonstrates improvement.`;
+    const examplePrompt = `Using the same aspects (${aspects}), rewrite a short example of the input text (2–3 sentences) that demonstrates improvement. Also suggest a compelling scene title. Format your response as:
+
+**Scene Title:** [Your suggested title]
+
+**Revised Text:** [Your revised text]
+
+**Analysis of Improvements:** [Brief explanation of changes]`;
     const exampleUserPrompt = `Original text:\n\n${content}`;
 
     const exampleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
