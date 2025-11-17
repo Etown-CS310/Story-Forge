@@ -9,9 +9,21 @@ interface StoryGraphViewerProps {
 
 export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   const mermaidRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [baseScale, setBaseScale] = useState(1); // The fitted scale that represents "100%"
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 }); // Store initial centered position
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isEditingZoom, setIsEditingZoom] = useState(false);
+  const [zoomInput, setZoomInput] = useState('100');
+  const [hasAutoFitted, setHasAutoFitted] = useState(false);
+  
+  const [isHovering, setIsHovering] = useState(false);
   
   // Track dark mode in state so it triggers re-render
   const [isDarkMode, setIsDarkMode] = useState(
@@ -78,6 +90,32 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         const { svg } = await mermaid.render('mermaid-graph', data.mermaid);
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
+          
+          // Auto-fit on first render
+          if (!hasAutoFitted && containerRef.current) {
+            const svgElement = mermaidRef.current.querySelector('svg');
+            if (svgElement) {
+              const svgRect = svgElement.getBoundingClientRect();
+              const containerRect = containerRef.current.getBoundingClientRect();
+              
+              // Calculate scale to fit (with some padding)
+              const scaleX = (containerRect.width * 0.9) / svgRect.width;
+              const scaleY = (containerRect.height * 0.9) / svgRect.height;
+              const fitScale = Math.min(scaleX, scaleY, 3); // Allow up to 300% if content is small
+              
+              // Center the content
+              const scaledWidth = svgRect.width * fitScale;
+              const scaledHeight = svgRect.height * fitScale;
+              const centerX = (containerRect.width - scaledWidth) / 2;
+              const centerY = (containerRect.height - scaledHeight) / 2;
+              
+              setBaseScale(fitScale); // This becomes our "100%"
+              setScale(fitScale);
+              setPosition({ x: centerX, y: centerY });
+              setInitialPosition({ x: centerX, y: centerY }); // Store for reset
+              setHasAutoFitted(true);
+            }
+          }
         }
         setLoading(false);
       } catch (err) {
@@ -88,7 +126,103 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     };
 
     void renderMermaid();
-  }, [data, isDarkMode]);
+  }, [data, isDarkMode, hasAutoFitted]);
+
+  // Add native wheel listener to properly prevent scroll and handle zoom
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleNativeWheel = (e: WheelEvent) => {
+      // Always prevent default scroll when wheel event is on the container
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Handle zoom directly here
+      const delta = e.deltaY * -0.001;
+      setScale(prevScale => {
+        const newScale = Math.min(Math.max(baseScale * 0.1, prevScale + delta * baseScale), baseScale * 3);
+        return newScale;
+      });
+    };
+
+    // passive: false is required to allow preventDefault
+    container.addEventListener('wheel', handleNativeWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleNativeWheel);
+    };
+  }, [baseScale]);
+
+  // This is now handled by the native event listener
+  // Keeping this for reference but it's not called anymore
+  const handleWheel = (e: React.WheelEvent) => {
+    // Moved to native listener for better control
+  };
+
+  // Handle mouse drag
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setIsHovering(false);
+  };
+  
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  // Reset view to fitted (100%)
+  const resetView = () => {
+    setScale(baseScale);
+    setPosition(initialPosition);
+  };
+
+  // Zoom in/out buttons (relative to baseScale)
+  const zoomIn = () => setScale(Math.min(scale + baseScale * 0.1, baseScale * 3)); // Max 300%
+  const zoomOut = () => setScale(Math.max(scale - baseScale * 0.1, baseScale * 0.1)); // Min 10%
+
+  // Handle zoom input
+  const handleZoomClick = () => {
+    setIsEditingZoom(true);
+    setZoomInput(Math.round((scale / baseScale) * 100).toString());
+  };
+
+  const handleZoomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setZoomInput(e.target.value);
+  };
+
+  const handleZoomInputBlur = () => {
+    const value = parseInt(zoomInput);
+    if (!isNaN(value) && value >= 10 && value <= 300) {
+      setScale((value / 100) * baseScale); // Convert percentage to scale relative to baseScale
+    }
+    setIsEditingZoom(false);
+  };
+
+  const handleZoomInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleZoomInputBlur();
+    } else if (e.key === 'Escape') {
+      setIsEditingZoom(false);
+      setZoomInput(Math.round((scale / baseScale) * 100).toString());
+    }
+  };
 
   const copyToClipboard = () => {
     if (data) {
@@ -166,7 +300,74 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-lg border-2 border-slate-200 dark:border-slate-700 p-6 overflow-x-auto">
+      {/* Zoom controls */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={zoomOut}
+          className="px-4 py-2.5 text-base font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
+          title="Zoom out"
+        >
+          −
+        </button>
+        {isEditingZoom ? (
+          <input
+            type="number"
+            value={zoomInput}
+            onChange={handleZoomInputChange}
+            onBlur={handleZoomInputBlur}
+            onKeyDown={handleZoomInputKeyDown}
+            autoFocus
+            min="10"
+            max="300"
+            className="w-[80px] px-3 py-2 text-sm text-center border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+          />
+        ) : (
+          <button
+            onClick={handleZoomClick}
+            className="min-w-[80px] px-3 py-2 text-sm text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-600"
+            title="Click to enter zoom level"
+          >
+            {Math.round((scale / baseScale) * 100)}%
+          </button>
+        )}
+        <button
+          onClick={zoomIn}
+          className="px-4 py-2.5 text-base font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
+          title="Zoom in"
+        >
+          +
+        </button>
+        <button
+          onClick={resetView}
+          className="px-4 py-2 text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
+          title="Reset to 100%"
+        >
+          Reset
+        </button>
+        <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          💡 {isHovering ? '🎯 Scroll to zoom' : 'Hover over graph to zoom with scroll'}, drag to pan
+        </span>
+      </div>
+
+      <div 
+        ref={containerRef}
+        className={`bg-white dark:bg-slate-800 rounded-lg border-2 transition-colors ${
+          isHovering 
+            ? 'border-purple-400 dark:border-purple-600' 
+            : 'border-slate-200 dark:border-slate-700'
+        } p-6 relative`}
+        style={{ 
+          height: '600px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onMouseEnter={handleMouseEnter}
+      >
         {loading && (
           <div className="flex items-center justify-center p-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
@@ -181,8 +382,15 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           </div>
         )}
 
-        <div className="flex justify-center">
-          <div ref={mermaidRef} className="mermaid-container inline-block min-w-full" />
+        <div 
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transformOrigin: 'top left',
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+          }}
+          className="inline-block"
+        >
+          <div ref={mermaidRef} className="mermaid-container" />
         </div>
       </div>
     </div>
