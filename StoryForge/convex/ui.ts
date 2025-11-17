@@ -80,13 +80,20 @@ export const updateNodeTitle = mutation({
 });
 
 export const createNodeAndEdge = mutation({
-  args: { storyId: v.id('stories'), fromNodeId: v.id('nodes'), label: v.string(), content: v.string() },
-  handler: async (ctx, { storyId, fromNodeId, label, content }) => {
+  args: { 
+    storyId: v.id('stories'), 
+    fromNodeId: v.id('nodes'), 
+    label: v.string(), 
+    content: v.string(),
+    title: v.optional(v.string())  // ← Added title parameter
+  },
+  handler: async (ctx, { storyId, fromNodeId, label, content, title }) => {
     const from = await ctx.db.get(fromNodeId);
     if (!from || from.storyId !== storyId) throw new Error('fromNode not in story');
     const nodeId = await ctx.db.insert('nodes', {
       storyId,
       role: 'narrator',
+      title: title || 'Untitled Scene',  // ← Use provided title or default
       content,
       metadata: {},
       version: 1,

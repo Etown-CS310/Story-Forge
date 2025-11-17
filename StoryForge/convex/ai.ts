@@ -238,11 +238,11 @@ export const generateChoices = action({
           },
           {
             role: 'user',
-            content: `Given this story text, suggest ${numChoices} interesting choices/branches the reader could make. Return as a JSON object with a "choices" key containing an array of objects, where each object has "label" and "description" fields.\n\nExample format: {"choices": [{"label": "...", "description": "..."}]}\n\n${content}`,
+            content: `Given this story text, suggest ${numChoices} interesting choices/branches the reader could make. Return as a JSON object with a "choices" key containing an array of objects, where each object has "label" (the choice text shown to the reader), "title" (a scene title for where this choice leads), and "description" (the opening content for that scene).\n\nExample format: {"choices": [{"label": "Enter the dark forest", "title": "Into the Shadows", "description": "The trees loom overhead as you step into darkness..."}]}\n\n${content}`,
           },
         ],
         temperature: 0.9,
-        max_tokens: 800,
+        max_tokens: 1000,
         response_format: { type: 'json_object' },
       }),
     });

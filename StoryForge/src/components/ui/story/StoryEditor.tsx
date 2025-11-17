@@ -24,6 +24,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [nodeContent, setNodeContent] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
+  const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
   
@@ -193,9 +194,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     setNodeTitle(newTitle);
                   }
                 }}
-                onGenerateChoice={(label, description) => {
+                onGenerateChoice={(label, description, title) => {
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
+                  setNewSceneTitle(title || '');
                   // Scroll to the Add Scene section
                   setTimeout(() => {
                     addSceneSectionRef.current?.scrollIntoView({ 
@@ -273,11 +275,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     Add New Scene
                   </div>
                   <Input
-                    placeholder="Path Label"
+                    placeholder="Path Label (e.g., 'Enter the forest', 'Stay silent')"
                     value={newChoiceLabel}
                     onChange={(e) => setNewChoiceLabel(e.target.value)}
                   />
+                  <Input
+                    placeholder="Scene Title (e.g., 'The Dark Forest', 'A Moment of Silence')"
+                    value={newSceneTitle}
+                    onChange={(e) => setNewSceneTitle(e.target.value)}
+                  />
                   <Textarea
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     rows={4}
                     placeholder="New scene content…"
                     value={newNodeContent}
@@ -290,9 +298,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         if (!selectedNodeId) return;
                         const label = newChoiceLabel.trim();
                         const content = newNodeContent.trim();
+                        const title = newSceneTitle.trim() || 'Untitled Scene';
                         if (!label || !content) return;
-                        await createNodeAndEdge({ storyId, fromNodeId: selectedNodeId, label, content });
+                        await createNodeAndEdge({ storyId, fromNodeId: selectedNodeId, label, content, title });
                         setNewChoiceLabel('');
+                        setNewSceneTitle('');
                         setNewNodeContent('');
                       })();
                     }}

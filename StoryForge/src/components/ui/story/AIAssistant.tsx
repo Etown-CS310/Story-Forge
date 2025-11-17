@@ -9,7 +9,7 @@ import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronU
 interface AIAssistantProps {
   content: string;
   onApplySuggestion: (newContent: string, newTitle?: string) => void;
-  onGenerateChoice: (label: string, description: string) => void;
+  onGenerateChoice: (label: string, description: string, title?: string) => void;
 }
 
 export default function AIAssistant({ content, onApplySuggestion, onGenerateChoice }: AIAssistantProps) {
@@ -17,7 +17,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [result, setResult] = React.useState<string>('');
   const [suggestions, setSuggestions] = React.useState<string>('');
   const [exampleEdits, setExampleEdits] = React.useState<string>('');
-  const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string }>>([]);
+  const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string; title?: string }>>([]);
   const [error, setError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
   const [expandLength, setExpandLength] = React.useState('2-3');
@@ -456,15 +456,20 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1">
                       <h4 className="font-semibold text-indigo-900 dark:text-indigo-100 mb-1">
-                        {choice.label}
+                        Choice: {choice.label}
                       </h4>
-                      <p className="text-sm text-indigo-800 dark:text-indigo-200">
+                      {choice.title && (
+                        <div className="text-xs text-indigo-700 dark:text-indigo-300 mb-1 bg-indigo-100 dark:bg-indigo-900 px-2 py-1 rounded inline-block">
+                          Scene: {choice.title}
+                        </div>
+                      )}
+                      <p className="text-sm text-indigo-800 dark:text-indigo-200 mt-2">
                         {choice.description}
                       </p>
                     </div>
                   </div>
                   <Button 
-                    onClick={() => onGenerateChoice(choice.label, choice.description)} 
+                    onClick={() => onGenerateChoice(choice.label, choice.description, choice.title)} 
                     size="sm" 
                     className="w-full mt-2"
                   >
