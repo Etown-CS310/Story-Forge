@@ -4,7 +4,7 @@ import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp, PenLine, Plus } from 'lucide-react';
+import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp, PenLine, Plus, MessageSquare } from 'lucide-react';
 
 interface AIAssistantProps {
   content: string;
@@ -17,8 +17,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [result, setResult] = React.useState<string>('');
   const [suggestions, setSuggestions] = React.useState<string>('');
   const [exampleEdits, setExampleEdits] = React.useState<string>('');
+  const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string }>>([]);
   const [error, setError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
+  const [expandLength, setExpandLength] = React.useState('2-3');
+  const [feedback, setFeedback] = React.useState('');
+  const [feedbackResult, setFeedbackResult] = React.useState('');
   const [collapsed, setCollapsed] = React.useState(false);
   const [apiKeyMissing, setApiKeyMissing] = React.useState(false);
 
@@ -41,6 +45,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     void checkAPIKey();
   }, [suggestImprovements]);
 
+  const clearResults = () => {
+    setError('');
+    setResult('');
+    setSuggestions('');
+    setExampleEdits('');
+    setGeneratedChoices([]);
+    setFeedbackResult('');
+  };
+
   const handleSuggest = async () => {
     if (!content.trim()) {
       setError('No content to analyze');
@@ -48,10 +61,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
 
     setLoading(true);
-    setError('');
-    setResult('');
-    setSuggestions('');
-    setExampleEdits('');
+    clearResults();
 
     try {
       const response = await suggestImprovements({ content });
@@ -59,7 +69,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         setSuggestions(response.suggestions);
         setExampleEdits(response.exampleEdits);
       } else {
-        setSuggestions(String(response));
+        setSuggestions(typeof response === 'string' ? response : JSON.stringify(response, null, 2));
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -79,10 +89,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
 
     setLoading(true);
-    setError('');
-    setResult('');
-    setSuggestions('');
-    setExampleEdits('');
+    clearResults();
 
     try {
       const rewritten = await rewriteContent({ content });
@@ -110,10 +117,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
 
     setLoading(true);
-    setError('');
-    setResult('');
-    setSuggestions('');
-    setExampleEdits('');
+    clearResults();
 
     try {
       const rewritten = await rewriteContent({ content, tone: customTone });
@@ -136,13 +140,10 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
 
     setLoading(true);
-    setError('');
-    setResult('');
-    setSuggestions('');
-    setExampleEdits('');
+    clearResults();
 
     try {
-      const enhanced = await enhanceContent({ content });
+      const enhanced = await enhanceContent({ content, targetLength: expandLength });
       setResult(enhanced);
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -162,21 +163,50 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
 
     setLoading(true);
-    setError('');
-    setResult('');
-    setSuggestions('');
-    setExampleEdits('');
+    clearResults();
 
     try {
       const choices = await generateChoices({ content, numChoices: 3 });
       if (choices.choices && Array.isArray(choices.choices)) {
-        setResult(`Generated ${choices.choices.length} choice suggestions. Click to add them below.`);
+        setGeneratedChoices(choices.choices);
+        setResult(`Generated ${choices.choices.length} choice suggestions. Click "Add to Story" buttons below to add them.`);
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
         setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError(`Failed to generate choices: ${err.message || 'Unknown error'}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFeedback = async () => {
+    if (!feedback.trim()) {
+      setError('Please enter feedback');
+      return;
+    }
+
+    if (!content.trim()) {
+      setError('No content to provide feedback on');
+      return;
+    }
+
+    setLoading(true);
+    clearResults();
+
+    try {
+      const feedbackResponse = await rewriteContent({ 
+        content: content,
+        tone: `addressing this feedback: ${feedback}`
+      });
+      setFeedbackResult(feedbackResponse);
+    } catch (err: any) {
+      if (err.message?.includes('OPENAI_API_KEY')) {
+        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+      } else {
+        setError(`Failed to apply feedback: ${err.message || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
@@ -289,14 +319,44 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               </Button>
             </div>
 
-            <Button onClick={() => { void handleEnhance(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Expand (Write More)
-            </Button>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="# of paragraphs"
+                value={expandLength}
+                onChange={(e) => setExpandLength(e.target.value)}
+                disabled={loading}
+                className="flex-1"
+              />
+              <Button onClick={() => { void handleEnhance(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Expand
+              </Button>
+            </div>
 
             {/* Row 3 */}
-            <Button onClick={() => alert('Feedback feature coming soon!')} disabled={loading} variant="outline" className="gap-2">
-              <AlertCircle className="w-4 h-4" /> Feedback
-            </Button>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Your feedback..."
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    void handleFeedback();
+                  }
+                }}
+                disabled={loading}
+                className="flex-1"
+              />
+              <Button 
+                onClick={() => { void handleFeedback(); }} 
+                disabled={loading || !feedback.trim() || !content.trim()} 
+                variant="outline" 
+                className="gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />} Feedback
+              </Button>
+            </div>
 
             <Button onClick={() => { void handleGenerateChoices(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Generate Choices
@@ -349,9 +409,52 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                 {result}
               </div>
-              <Button onClick={() => onApplySuggestion(result)} size="sm" className="w-full">
+              {!generatedChoices.length && (
+                <Button onClick={() => onApplySuggestion(result)} size="sm" className="w-full">
+                  Apply to Editor
+                </Button>
+              )}
+            </div>
+          )}
+
+          {feedbackResult && (
+            <div className="p-4 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border border-purple-200 dark:border-purple-800">
+              <div className="flex items-center gap-2 mb-3">
+                <MessageSquare className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <h3 className="font-semibold text-purple-900 dark:text-purple-100">Revised Based on Feedback</h3>
+              </div>
+              <div className="text-sm text-purple-900 dark:text-purple-100 whitespace-pre-wrap">
+                {feedbackResult}
+              </div>
+              <Button onClick={() => onApplySuggestion(feedbackResult)} size="sm" className="w-full mt-3">
                 Apply to Editor
               </Button>
+            </div>
+          )}
+
+          {generatedChoices.length > 0 && (
+            <div className="space-y-3">
+              {generatedChoices.map((choice, idx) => (
+                <div key={idx} className="p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border border-indigo-200 dark:border-indigo-800">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-indigo-900 dark:text-indigo-100 mb-1">
+                        {choice.label}
+                      </h4>
+                      <p className="text-sm text-indigo-800 dark:text-indigo-200">
+                        {choice.description}
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => onGenerateChoice(choice.label, choice.description)} 
+                    size="sm" 
+                    className="w-full mt-2"
+                  >
+                    Add to Story
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

@@ -153,9 +153,15 @@ export const rewriteContent = action({
 export const enhanceContent = action({
   args: {
     content: v.string(),
+    targetLength: v.optional(v.string()),
   },
-  handler: async (_, { content }) => {
+  handler: async (_, { content, targetLength }) => {
     const apiKey = getApiKey();
+
+    // Parse the target length (e.g., "2-3", "1-2", "3-5 paragraphs")
+    const lengthInstruction = targetLength 
+      ? `Expand to approximately ${targetLength} paragraphs` 
+      : 'Expand by approximately 50-100%';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -169,11 +175,11 @@ export const enhanceContent = action({
           {
             role: 'system',
             content:
-              'You are a creative writing assistant. Expand and enhance the given text by adding more detail, depth, and narrative richness while maintaining the original tone and direction.',
+              `You are a creative writing assistant. ${lengthInstruction}. Expand and enhance the given text by adding more detail, depth, and narrative richness while maintaining the original tone and direction.`,
           },
           {
             role: 'user',
-            content: `Enhance and expand this text by adding more detail and depth:\n\n${content}`,
+            content: `Enhance and expand this text:\n\n${content}`,
           },
         ],
         temperature: 0.8,

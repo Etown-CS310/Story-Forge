@@ -27,6 +27,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
 
+  // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
+  const aiAssistantKey = selectedNodeId ?? 'no-node';
+
   React.useEffect(() => {
     if (!graph) return;
     if (!selectedNodeId && graph.rootNodeId) setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
@@ -177,7 +180,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
               />
+              {/* Add key prop to force remount when selectedNodeId changes */}
               <AIAssistant
+                key={aiAssistantKey}
                 content={nodeContent}
                 onApplySuggestion={(newContent) => setNodeContent(newContent)}
                 onGenerateChoice={(label, description) => {
