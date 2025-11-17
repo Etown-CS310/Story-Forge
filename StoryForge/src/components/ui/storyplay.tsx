@@ -101,19 +101,14 @@ export default function StoryPlay() {
 
         {!sidebarOpen && (
           <CardContent className="pt-4 flex flex-col items-center gap-6">
-            <button
-              onClick={() => setShowNewStoryModal(true)}
-              className="text-slate-600 dark:text-slate-300 hover:text-blue-500"
-            >
-              <StoryDialogTooltip label="Create New Story">
-                <button
-                  onClick={() => setShowNewStoryModal(true)}
-                  className="text-slate-600 dark:text-slate-300 hover:text-blue-500"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-              </StoryDialogTooltip>
-            </button>
+            <StoryDialogTooltip label="Create New Story">
+              <button
+                onClick={() => setShowNewStoryModal(true)}
+                className="text-slate-600 dark:text-slate-300 hover:text-blue-500"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </StoryDialogTooltip>
 
             <StoryDialogTooltip label="Search Stories">
               <button

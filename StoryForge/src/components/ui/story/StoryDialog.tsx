@@ -3,14 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { StoryRow } from '@/components/ui/story';
-import { Id } from '@/../convex/_generated/dataModel';
+import { Id, Doc } from '@/../convex/_generated/dataModel';
 
 interface StoryDialogProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 
   title: string;
-  stories?: any[];
+  stories?: Doc<'stories'>[];
   enableSearch?: boolean;
   onSearch?: (q: string) => void;
 
