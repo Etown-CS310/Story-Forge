@@ -205,9 +205,21 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
   const handleZoomInputBlur = () => {
     const value = parseInt(zoomInput);
-    if (!isNaN(value) && value >= 10 && value <= 300) {
-      setScale((value / 100) * baseScale); // Convert percentage to scale relative to baseScale
+
+    // Prevent division-by-zero or invalid baseScale use
+    if (baseScale <= 0) {
+      setIsEditingZoom(false);
+      return;
     }
+
+    if (!isNaN(value)) {
+      // Clamp value between 10 and 300
+      const clamped = Math.min(Math.max(value, 10), 300);
+
+      setScale((clamped / 100) * baseScale);
+      setZoomInput(clamped.toString());
+    }
+
     setIsEditingZoom(false);
   };
 
@@ -315,7 +327,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             autoFocus
             min="10"
             max="300"
-            className="w-[80px] px-3 py-2 text-sm text-center border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
+            className="w-[80px] px-3 py-2 text-sm text-center border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         ) : (
           <button

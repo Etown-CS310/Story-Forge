@@ -22,10 +22,14 @@ export const getStoryMermaid = query({
     
     for (const node of nodes) {
       const nodeId = sanitizeId(node._id);
-      // Use title if available, otherwise fallback to truncated content
-      const displayText = node.title 
-        ? truncate(node.title, 40) 
+
+      // Escape text for Mermaid
+      const rawDisplayText = node.title
+        ? truncate(node.title, 40)
         : truncate(node.content, 40);
+
+      const displayText = escapeMermaidText(rawDisplayText);
+
       const isRoot = story.rootNodeId === node._id;
       
       if (isRoot) {
@@ -40,7 +44,9 @@ export const getStoryMermaid = query({
     for (const edge of edges) {
       const fromId = sanitizeId(edge.fromNodeId);
       const toId = sanitizeId(edge.toNodeId);
-      const label = truncate(edge.label, 30);
+
+      const rawLabel = truncate(edge.label, 30);
+      const label = escapeMermaidText(rawLabel);
       
       let suffix = '';
       if (edge.conditions) suffix += ' 🔒';
@@ -50,12 +56,9 @@ export const getStoryMermaid = query({
     }
     
     if (story.rootNodeId) {
-      // Use different colors for dark mode vs light mode
       if (isDarkMode) {
-        // Dark mode: Darker green background with bright green border for visibility
         mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#15803d,stroke:#22c55e,stroke-width:3px,color:#dcfce7\n`;
       } else {
-        // Light mode: Original bright light green
         mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#86efac,stroke:#16a34a,stroke-width:3px,color:#052e16\n`;
       }
     }
@@ -77,4 +80,8 @@ function sanitizeId(id: string): string {
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   return text.substring(0, maxLen - 3) + '...';
+}
+
+function escapeMermaidText(text: string): string {
+  return text.replace(/"/g, '&quot;');
 }
