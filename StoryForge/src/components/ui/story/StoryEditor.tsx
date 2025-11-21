@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network, Maximize2, Minimize2 } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp } from 'lucide-react';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
@@ -117,12 +117,12 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 >
                   {isFullHeight ? (
                     <>
-                      <Minimize2 className="w-3 h-3" />
+                      <ChevronsUp className="w-3 h-3" />
                       Normal
                     </>
                   ) : (
                     <>
-                      <Maximize2 className="w-3 h-3" />
+                      <ChevronsDown className="w-3 h-3" />
                       Expand
                     </>
                   )}
