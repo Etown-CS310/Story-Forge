@@ -21,6 +21,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [error, setError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
   const [expandLength, setExpandLength] = React.useState('2-3');
+  const [expandLengthError, setExpandLengthError] = React.useState<string>('');
   const [feedback, setFeedback] = React.useState('');
   const [feedbackResult, setFeedbackResult] = React.useState('');
   const [collapsed, setCollapsed] = React.useState(false);
@@ -52,6 +53,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     setExampleEdits('');
     setGeneratedChoices([]);
     setFeedbackResult('');
+  };
+
+  const validateExpandLength = (value: string): boolean => {
+    // Allow formats: "2", "2-3", "2-3 paragraphs"
+    const pattern = /^\d+(-\d+)?(\s+paragraphs?)?$/i;
+    return pattern.test(value.trim());
   };
 
   const handleSuggest = async () => {
@@ -139,11 +146,16 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       return;
     }
 
+    if (!validateExpandLength(expandLength)) {
+      setError('Invalid length format. Please use: N, N-M, or N-M paragraphs (e.g., "2", "2-3", "3-5 paragraphs")');
+      return;
+    }
+
     setLoading(true);
     clearResults();
 
     try {
-      const enhanced = await enhanceContent({ content, targetLength: expandLength });
+      const enhanced = await enhanceContent({ content, targetLength: expandLength.trim() });
       setResult(enhanced);
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -168,8 +180,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     try {
       const choices = await generateChoices({ content, numChoices: 3 });
       if (choices.choices && Array.isArray(choices.choices)) {
-        setGeneratedChoices(choices.choices);
-        setResult(`Generated ${choices.choices.length} choice suggestions. Click "Add to Story" buttons below to add them.`);
+        const validChoices = choices.choices.filter((c: any) => c.label && c.description);
+        
+        if (validChoices.length === 0) {
+          setError('AI generated choices but none had valid label and description fields');
+          return;
+        }
+        
+        setGeneratedChoices(validChoices);
+        setResult(`Generated ${validChoices.length} choice suggestion${validChoices.length === 1 ? '' : 's'}. Click "Add to Story" buttons below to add them.`);
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -199,7 +218,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     try {
       const feedbackResponse = await rewriteContent({ 
         content: content,
-        tone: `addressing this feedback: ${feedback}`
+        feedback: feedback
       });
       setFeedbackResult(feedbackResponse);
     } catch (err: any) {
@@ -216,8 +235,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const parseRevisedText = (text: string) => {
     const revisedMatch = text.match(/\*\*Revised Text:\*\*\s*([\s\S]*?)(?=\n\n---|\n\n\*\*Analysis|$)/i);
     if (revisedMatch) {
-      const content = revisedMatch[1].trim();
-      return content.replace(/^Revised [Tt]ext:\s*/i, '');
+      return revisedMatch[1].trim();
     }
     const lines = text.split('\n\n');
     const storyPart = lines.find(line =>
@@ -227,15 +245,40 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       !line.match(/^Revised [Tt]ext:/i) &&
       !line.match(/^Scene Title:/i)
     );
-    return storyPart ? storyPart.replace(/^Revised [Tt]ext:\s*/i, '') : text;
+    return storyPart || text;
   };
 
   const parseSceneTitle = (text: string) => {
+    // Try the main marker first (expected format)
     const titleMatch = text.match(/\*\*Scene Title:\*\*\s*(.+?)(?:\n|$)/i);
     if (titleMatch) {
       return titleMatch[1].trim();
     }
-    return undefined;
+    
+    // Fallback: look for "Scene Title:" without bold markers
+    const altTitleMatch = text.match(/Scene Title:\s*(.+?)(?:\n|$)/i);
+    if (altTitleMatch) {
+      return altTitleMatch[1].trim();
+    }
+    
+    // Additional fallback: look for any line ending with a colon (potential title marker)
+    const colonTitleMatch = text.match(/^(.+?):\s*$/im);
+    if (colonTitleMatch && colonTitleMatch[1].length < 100) {
+      return colonTitleMatch[1].trim();
+    }
+    
+    // Fallback: use the first non-empty line if it looks like a title
+    // (short, not starting with "**" or a number, not a section header)
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const possibleTitle = lines.find(line =>
+      line.length < 100 &&
+      !line.startsWith('**') &&
+      !line.match(/^\d+\./) &&
+      !line.match(/^Revised [Tt]ext:/i) &&
+      !line.match(/^Analysis/i)
+    );
+    
+    return possibleTitle || undefined;
   };
 
   const parseAnalysis = (text: string) => {
@@ -328,18 +371,38 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               </Button>
             </div>
 
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="e.g. 2-3, 1-2, 3-5 paragraphs"
-                value={expandLength}
-                onChange={(e) => setExpandLength(e.target.value)}
-                disabled={loading}
-                className="flex-1"
-              />
-              <Button onClick={() => { void handleEnhance(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Expand
-              </Button>
+            <div className="flex flex-col gap-1">
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="e.g. 2-3 paragraphs, 1-2 paragraphs"
+                  value={expandLength}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setExpandLength(value);
+                    
+                    // Validate in real-time
+                    if (value && !validateExpandLength(value)) {
+                      setExpandLengthError('Use: N, N-M, or N-M paragraphs');
+                    } else {
+                      setExpandLengthError('');
+                    }
+                  }}
+                  disabled={loading}
+                  className={`flex-1 ${expandLengthError ? 'border-red-500 dark:border-red-500' : ''}`}
+                />
+                <Button 
+                  onClick={() => { void handleEnhance(); }} 
+                  disabled={loading || !content.trim() || !!expandLengthError} 
+                  variant="outline" 
+                  className="gap-2"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Expand
+                </Button>
+              </div>
+              {expandLengthError && (
+                <span className="text-xs text-red-600 dark:text-red-400 ml-1">{expandLengthError}</span>
+              )}
             </div>
 
             {/* Row 3 */}

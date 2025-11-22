@@ -112,13 +112,22 @@ export const rewriteContent = action({
   args: {
     content: v.string(),
     tone: v.optional(v.string()),
+    feedback: v.optional(v.string()),
   },
-  handler: async (_, { content, tone }) => {
+  handler: async (_, { content, tone, feedback }) => {
     const apiKey = getApiKey();
 
-    const systemContent = tone
-      ? `You are a creative writing assistant. Rewrite the text in a ${tone} tone while preserving the core meaning and story beats.`
-      : 'You are a creative writing assistant. Rewrite the text in an engaging way while preserving the core meaning and story beats.';
+    // Build system prompt based on what's provided
+    let systemContent: string;
+    
+    if (feedback) {
+      // Feedback takes priority - it's more specific
+      systemContent = `You are a creative writing assistant. Revise the text by addressing this specific feedback: "${feedback}". Maintain the core story while incorporating the requested changes.`;
+    } else if (tone) {
+      systemContent = `You are a creative writing assistant. Rewrite the text in a ${tone} tone while preserving the core meaning and story beats.`;
+    } else {
+      systemContent = 'You are a creative writing assistant. Rewrite the text in an engaging way while preserving the core meaning and story beats.';
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
