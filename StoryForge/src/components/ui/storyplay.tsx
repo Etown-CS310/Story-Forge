@@ -127,58 +127,58 @@ export default function StoryPlay() {
                 <BookOpenText className="w-6 h-6" />
               </button>
             </StoryDialogTooltip>
-
-            <StoryDialog
-              open={showNewStoryModal}
-              onOpenChange={setShowNewStoryModal}
-              title="Create a New Story"
-              onEdit={(id) => {
-                setEditingStoryId(id);
-                setActiveSessionId(null);
-              }}
-              onStart={(sessionId: Id<'sessions'>) => {
-                setActiveSessionId(sessionId);
-                setEditingStoryId(null);
-              }}
-            >
-              <NewStoryCard />
-            </StoryDialog>
-
-            <StoryDialog
-              open={showSearchModal}
-              onOpenChange={setShowSearchModal}
-              title="Search Stories"
-              enableSearch
-              stories={stories}
-              onSearch={(txt) => search(txt)}
-              onEdit={(id) => {
-                setEditingStoryId(id);
-                setActiveSessionId(null);
-              }}
-              onStart={(sessionId) => {
-                setActiveSessionId(sessionId);
-                setEditingStoryId(null);
-              }}
-            />
-
-            <StoryDialog
-              open={showStoryListModal}
-              onOpenChange={setShowStoryListModal}
-              title="All Stories"
-              stories={stories}
-              onEdit={(id) => {
-                setEditingStoryId(id);
-                setActiveSessionId(null);
-              }}
-              onStart={(sessionId) => {
-                setActiveSessionId(sessionId);
-                setEditingStoryId(null);
-              }}
-            />
           </CardContent>
         )}
       </Card>
 
+      {/* StoryDialog modals moved outside CardContent for proper stacking */}
+      <StoryDialog
+        open={showNewStoryModal}
+        onOpenChange={setShowNewStoryModal}
+        title="Create a New Story"
+        onEdit={(id) => {
+          setEditingStoryId(id);
+          setActiveSessionId(null);
+        }}
+        onStart={(sessionId: Id<'sessions'>) => {
+          setActiveSessionId(sessionId);
+          setEditingStoryId(null);
+        }}
+      >
+        <NewStoryCard />
+      </StoryDialog>
+
+      <StoryDialog
+        open={showSearchModal}
+        onOpenChange={setShowSearchModal}
+        title="Search Stories"
+        enableSearch
+        stories={stories}
+        onSearch={(txt) => search(txt)}
+        onEdit={(id) => {
+          setEditingStoryId(id);
+          setActiveSessionId(null);
+        }}
+        onStart={(sessionId) => {
+          setActiveSessionId(sessionId);
+          setEditingStoryId(null);
+        }}
+      />
+
+      <StoryDialog
+        open={showStoryListModal}
+        onOpenChange={setShowStoryListModal}
+        title="All Stories"
+        stories={stories}
+        onEdit={(id) => {
+          setEditingStoryId(id);
+          setActiveSessionId(null);
+        }}
+        onStart={(sessionId) => {
+          setActiveSessionId(sessionId);
+          setEditingStoryId(null);
+        }}
+      />
       {editingStoryId ? (
         <StoryEditor storyId={editingStoryId} onClose={() => setEditingStoryId(null)} />
       ) : activeSessionId ? (

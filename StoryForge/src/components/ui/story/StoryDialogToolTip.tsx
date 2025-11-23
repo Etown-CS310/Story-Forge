@@ -1,21 +1,19 @@
 import React from 'react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 
-interface StoryDialognTooltipProps {
+interface StoryDialogTooltipProps {
   label: string;
   children: React.ReactNode;
 }
 
-export function StoryDialogTooltip({ label, children }: StoryDialognTooltipProps) {
+export function StoryDialogTooltip({ label, children }: StoryDialogTooltipProps) {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>{children}</TooltipTrigger>
-        <TooltipContent side="right">
-          <p>{label}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right">
+        <p>{label}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
