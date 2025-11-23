@@ -38,6 +38,22 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const enhanceContent = useAction(api.ai.enhanceContent);
   const generateChoices = useAction(api.ai.generateChoices);
 
+  // Moved after all state declarations for better organization
+  const clearResults = () => {
+    setError('');
+    setResult('');
+    setSuggestions('');
+    setExampleEdits(null);
+    setGeneratedChoices([]);
+    setFeedbackResult('');
+  };
+
+  const validateExpandLength = (value: string): boolean => {
+    // Allow formats: "2", "2-3", "2-3 paragraphs"
+    const pattern = /^\d+(-\d+)?(\s+paragraph(s?)?)?$/i;
+    return pattern.test(value.trim());
+  };
+
   React.useEffect(() => {
     const checkAPIKey = async () => {
       try {
@@ -51,21 +67,6 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     };
     void checkAPIKey();
   }, [suggestImprovements]);
-
-  const clearResults = () => {
-    setError('');
-    setResult('');
-    setSuggestions('');
-    setExampleEdits(null);
-    setGeneratedChoices([]);
-    setFeedbackResult('');
-  };
-
-  const validateExpandLength = (value: string): boolean => {
-    // Allow formats: "2", "2-3", "2-3 paragraphs"
-    const pattern = /^\d+(-\d+)?(\s+paragraphs?)?$/i;
-    return pattern.test(value.trim());
-  };
 
   const handleSuggest = async () => {
     if (!content.trim()) {
@@ -152,12 +153,11 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       return;
     }
 
-    if (!validateExpandLength(expandLength)) {
-      setError('Invalid length format. Please use: N, N-M, N paragraphs, or N-M paragraphs (e.g., "2", "2-3", "2 paragraphs", "3-5 paragraphs")');
+    // Only check expandLengthError state (set by real-time validation)
+    if (expandLengthError) {
       return;
     }
 
-    setError('');
     setLoading(true);
     clearResults();
 
@@ -196,7 +196,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         }
         
         setGeneratedChoices(validChoices);
-        setResult(`Generated ${validChoices.length} choice suggestion${validChoices.length === 1 ? '' : 's'}. Click "Add to Story" buttons below to add them.`);
+        // Don't set result text when choices are generated - the choices themselves are the result
       } else {
         setError('AI did not return any choices. Please try again or check your input.');
       }
@@ -326,29 +326,34 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
             <div className="flex flex-col gap-1">
               <div className="flex gap-2">
-                <Input
-                  type="text"
-                  placeholder="e.g. 2-3 paragraphs, 1-2 paragraphs"
-                  value={expandLength}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setExpandLength(value);
-                    
-                    // Validate in real-time
-                    if (value && !validateExpandLength(value)) {
-                      setExpandLengthError('Use: N, N-M, or N-M paragraphs');
-                    } else {
-                      setExpandLengthError('');
-                    }
-                  }}
-                  disabled={loading}
-                  className={`flex-1 ${expandLengthError ? 'border-red-500 dark:border-red-500' : ''}`}
-                />
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs text-slate-600 dark:text-slate-400 font-medium ml-1">
+                    Target length:
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. 2-3, 1-2 paragraphs"
+                    value={expandLength}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setExpandLength(value);
+                      
+                      // Validate in real-time
+                      if (value && !validateExpandLength(value)) {
+                        setExpandLengthError('Use: N, N-M, or N-M paragraphs');
+                      } else {
+                        setExpandLengthError('');
+                      }
+                    }}
+                    disabled={loading}
+                    className={expandLengthError ? 'border-red-500 dark:border-red-500' : ''}
+                  />
+                </div>
                 <Button 
                   onClick={() => { void handleEnhance(); }} 
                   disabled={loading || !content.trim() || !!expandLengthError} 
                   variant="outline" 
-                  className="gap-2"
+                  className="gap-2 self-end"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Expand
                 </Button>
@@ -417,7 +422,11 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                   <div className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
                     {exampleEdits.revisedText}
                   </div>
-                  <Button onClick={() => onApplySuggestion(exampleEdits.revisedText, exampleEdits.sceneTitle || undefined)} size="sm" className="w-full mt-3">
+                  <Button 
+                    onClick={() => onApplySuggestion(exampleEdits.revisedText, exampleEdits.sceneTitle || undefined)} 
+                    size="sm" 
+                    className="w-full mt-3"
+                  >
                     Apply Revised Text to Editor
                   </Button>
                 </div>
@@ -442,11 +451,9 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                 {result}
               </div>
-              {!generatedChoices.length && (
-                <Button onClick={() => onApplySuggestion(result)} size="sm" className="w-full">
-                  Apply to Editor
-                </Button>
-              )}
+              <Button onClick={() => onApplySuggestion(result)} size="sm" className="w-full">
+                Apply to Editor
+              </Button>
             </div>
           )}
 
