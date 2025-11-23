@@ -313,7 +313,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   };
 
   const handleZoomInputBlur = () => {
-    const value = parseInt(zoomInput);
+    const value = parseInt(zoomInput, 10);
 
     // Prevent division-by-zero or invalid baseScale use
     if (baseScale <= 0) {
@@ -366,6 +366,22 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     const currentSvg = mermaidRef.current?.querySelector('svg');
     if (!currentSvg || !data) return;
     
+    // Helper function to download SVG
+    const downloadSvgBlob = (svgContent: string | SVGSVGElement, filename: string) => {
+      const svgData = typeof svgContent === 'string' 
+        ? svgContent 
+        : new XMLSerializer().serializeToString(svgContent);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+    
+    const filename = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
+    
     // If we're in dark mode, temporarily render light mode version for download
     if (isDarkMode) {
       try {
@@ -387,35 +403,15 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         const { svg: lightSvg } = await mermaid.render('mermaid-download', data.mermaid);
         
         // Download the light version
-        const blob = new Blob([lightSvg], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadSvgBlob(lightSvg, filename);
       } catch (err) {
         console.error('Failed to generate light mode SVG:', err);
         // Fallback to current SVG if light mode generation fails
-        const svgData = new XMLSerializer().serializeToString(currentSvg);
-        const blob = new Blob([svgData], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
-        link.click();
-        URL.revokeObjectURL(url);
+        downloadSvgBlob(currentSvg, filename);
       }
     } else {
       // Already in light mode, download current SVG
-      const svgData = new XMLSerializer().serializeToString(currentSvg);
-      const blob = new Blob([svgData], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadSvgBlob(currentSvg, filename);
     }
   };
 
