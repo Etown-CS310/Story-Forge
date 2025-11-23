@@ -400,7 +400,8 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         });
         
         // Render light mode version
-        const { svg: lightSvg } = await mermaid.render('mermaid-download', data.mermaid);
+        const uniqueId = 'mermaid-download-' + Date.now();
+        const { svg: lightSvg } = await mermaid.render(uniqueId, data.mermaid);
         
         // Download the light version
         downloadSvgBlob(lightSvg, filename);
