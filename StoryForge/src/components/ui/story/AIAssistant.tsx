@@ -153,7 +153,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
 
     if (!validateExpandLength(expandLength)) {
-      setError('Invalid length format. Please use: N, N-M, or N-M paragraphs (e.g., "2", "2-3", "3-5 paragraphs")');
+      setError('Invalid length format. Please use: N, N-M, N paragraphs, or N-M paragraphs (e.g., "2", "2-3", "2 paragraphs", "3-5 paragraphs")');
       return;
     }
 
