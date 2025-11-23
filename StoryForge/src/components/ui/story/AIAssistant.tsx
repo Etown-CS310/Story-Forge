@@ -12,11 +12,17 @@ interface AIAssistantProps {
   onGenerateChoice: (label: string, description: string, title?: string) => void;
 }
 
+interface ExampleEdits {
+  sceneTitle: string;
+  revisedText: string;
+  analysis: string;
+}
+
 export default function AIAssistant({ content, onApplySuggestion, onGenerateChoice }: AIAssistantProps) {
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<string>('');
   const [suggestions, setSuggestions] = React.useState<string>('');
-  const [exampleEdits, setExampleEdits] = React.useState<string>('');
+  const [exampleEdits, setExampleEdits] = React.useState<ExampleEdits | null>(null);
   const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string; title?: string }>>([]);
   const [error, setError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
@@ -50,7 +56,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     setError('');
     setResult('');
     setSuggestions('');
-    setExampleEdits('');
+    setExampleEdits(null);
     setGeneratedChoices([]);
     setFeedbackResult('');
   };
@@ -72,11 +78,11 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
     try {
       const response = await suggestImprovements({ content });
-      if (typeof response === 'object' && response.suggestions && response.exampleEdits) {
+      if (response.exampleEdits && response.suggestions) {
         setSuggestions(response.suggestions);
         setExampleEdits(response.exampleEdits);
       } else {
-        setSuggestions(typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response));
+        setError('AI did not return suggestions. Please try again or check your input.');
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -233,57 +239,6 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     } finally {
       setLoading(false);
     }
-  };
-
-  const parseRevisedText = (text: string) => {
-    const revisedMatch = text.match(/\*\*Revised Text:\*\*\s*([\s\S]*?)(?=\n\n---|\n\n\*\*Analysis|$)/i);
-    if (revisedMatch) {
-      return revisedMatch[1].trim();
-    }
-    const lines = text.split('\n\n');
-    const storyPart = lines.find(line =>
-      line.length > 100 &&
-      !line.startsWith('**') &&
-      !line.match(/^\d+\./) &&
-      !line.match(/^Revised [Tt]ext:/i) &&
-      !line.match(/^Scene Title:/i)
-    );
-    return storyPart || text;
-  };
-
-  const parseSceneTitle = (text: string) => {
-    // Try the main marker first (expected format)
-    const titleMatch = text.match(/\*\*Scene Title:\*\*\s*(.+?)(?:\n|$)/i);
-    if (titleMatch) {
-      return titleMatch[1].trim();
-    }
-    
-    // Fallback: look for "Scene Title:" without bold markers
-    const altTitleMatch = text.match(/Scene Title:\s*(.+?)(?:\n|$)/i);
-    if (altTitleMatch) {
-      return altTitleMatch[1].trim();
-    }
-    
-    // Fallback: use the first non-empty line if it looks like a title
-    // (short, not starting with "**" or a number, not a section header)
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    const possibleTitle = lines.find(line =>
-      line.length < 100 &&
-      !line.startsWith('**') &&
-      !line.match(/^\d+\./) &&
-      !line.match(/^Revised [Tt]ext:/i) &&
-      !line.match(/^Analysis/i)
-    );
-    
-    return possibleTitle || undefined;
-  };
-
-  const parseAnalysis = (text: string) => {
-    const analysisMatch = text.match(/\*\*Analysis of Improvements:\*\*\s*([\s\S]*?)$/i);
-    if (analysisMatch) {
-      return analysisMatch[1].trim();
-    }
-    return '';
   };
 
   return (
@@ -444,37 +399,37 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                 </div>
               </div>
 
-              {exampleEdits && parseRevisedText(exampleEdits) && (
+              {exampleEdits && exampleEdits.revisedText && (
                 <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2 mb-3">
                     <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <h3 className="font-semibold text-blue-900 dark:text-blue-100">Revised Text</h3>
                   </div>
-                  {parseSceneTitle(exampleEdits) && (
+                  {exampleEdits.sceneTitle && (
                     <div className="mb-3 p-2 bg-blue-100 dark:bg-blue-900 rounded border border-blue-300 dark:border-blue-700">
                       <div className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">Suggested Scene Title:</div>
                       <div className="text-sm text-blue-900 dark:text-blue-100 font-semibold">
-                        {parseSceneTitle(exampleEdits)}
+                        {exampleEdits.sceneTitle}
                       </div>
                     </div>
                   )}
                   <div className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
-                    {parseRevisedText(exampleEdits)}
+                    {exampleEdits.revisedText}
                   </div>
-                  <Button onClick={() => onApplySuggestion(parseRevisedText(exampleEdits), parseSceneTitle(exampleEdits))} size="sm" className="w-full mt-3">
+                  <Button onClick={() => onApplySuggestion(exampleEdits.revisedText, exampleEdits.sceneTitle || undefined)} size="sm" className="w-full mt-3">
                     Apply Revised Text to Editor
                   </Button>
                 </div>
               )}
 
-              {exampleEdits && parseAnalysis(exampleEdits) && (
+              {exampleEdits && exampleEdits.analysis && (
                 <div className="p-4 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-200 dark:border-green-800">
                   <div className="flex items-center gap-2 mb-3">
                     <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400" />
                     <h3 className="font-semibold text-green-900 dark:text-green-100">Analysis of Improvements</h3>
                   </div>
                   <div className="text-sm text-green-900 dark:text-green-100 whitespace-pre-wrap">
-                    {parseAnalysis(exampleEdits)}
+                    {exampleEdits.analysis}
                   </div>
                 </div>
               )}

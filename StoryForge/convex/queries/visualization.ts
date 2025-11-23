@@ -84,9 +84,11 @@ function truncate(text: string, maxLen: number): string {
 
 function escapeMermaidText(text: string): string {
   // Replace problematic characters that can break Mermaid syntax
+  // IMPORTANT: Escape # first, before creating any &#...; entities
   return text
     .replace(/\n/g, ' ')           // Replace newlines with spaces
     .replace(/\r/g, '')            // Remove carriage returns
+    .replace(/#/g, '&#35;')        // Escape # FIRST (before creating other entities)
     .replace(/"/g, '&#34;')        // Escape double quotes
     .replace(/\[/g, '&#91;')       // Escape opening brackets
     .replace(/\]/g, '&#93;')       // Escape closing brackets
@@ -94,7 +96,6 @@ function escapeMermaidText(text: string): string {
     .replace(/}/g, '&#125;')       // Escape closing braces
     .replace(/\(/g, '&#40;')       // Escape opening parentheses
     .replace(/\)/g, '&#41;')       // Escape closing parentheses
-    .replace(/#(?!\d+;)/g, '&#35;') // Escape # that aren't part of HTML numeric entities
     .replace(/\|/g, '&#124;')      // Escape pipes
     .replace(/</g, '&lt;')         // Escape less than
     .replace(/>/g, '&gt;');        // Escape greater than

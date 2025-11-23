@@ -15,7 +15,7 @@ function getApiKey() {
 export const suggestImprovements = action({
   args: {
     content: v.string(),
-    selectedAspects: v.optional(v.string()), // ✅ optional argument
+    selectedAspects: v.optional(v.string()),
   },
   handler: async (_, { content, selectedAspects }) => {
     const apiKey = getApiKey();
@@ -39,11 +39,10 @@ export const suggestImprovements = action({
       ? selectedAspects
       : randomAspects.sort(() => Math.random() - 0.5).slice(0, 3).join(', ');
 
-    // ✅ Fix: Assign template strings to variables first
     const systemPrompt = `You are a creative writing assistant. Provide exactly 3 specific, actionable suggestions to improve narrative text. Focus your analysis on these aspects: ${aspects}. Each suggestion should be concrete and distinct.`;
     const userPrompt = `Analyze this story text and provide exactly 3 distinct improvement suggestions:\n\n${content}`;
 
-    // 🔥 Send content and selected aspects to OpenAI
+    // Send content and selected aspects to OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -67,14 +66,15 @@ export const suggestImprovements = action({
     const data = await response.json();
     const suggestionsText = data.choices?.[0]?.message?.content ?? '';
 
-    // Generate example rewritten text
-    const examplePrompt = `Using the same aspects (${aspects}), rewrite a short example of the input text (2–3 sentences) that demonstrates improvement. Also suggest a compelling scene title. Format your response as:
+    // Generate example rewritten text with structured JSON output
+    const examplePrompt = `Using the same aspects (${aspects}), rewrite a short example of the input text (2–3 sentences) that demonstrates improvement. Also suggest a compelling scene title.
 
-**Scene Title:** [Your suggested title]
-
-**Revised Text:** [Your revised text]
-
-**Analysis of Improvements:** [Brief explanation of changes]`;
+Return your response as a JSON object with this exact structure:
+{
+  "sceneTitle": "Your suggested scene title",
+  "revisedText": "Your revised text (2-3 sentences)",
+  "analysis": "Brief explanation of the improvements made"
+}`;
     const exampleUserPrompt = `Original text:\n\n${content}`;
 
     const exampleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -90,6 +90,7 @@ export const suggestImprovements = action({
           { role: 'user', content: exampleUserPrompt },
         ],
         temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -98,12 +99,24 @@ export const suggestImprovements = action({
       throw new Error(`OpenAI API (example) request failed: ${exampleResponse.status} ${exampleResponse.statusText} - ${errorText}`);
     }
     const exampleData = await exampleResponse.json();
-    const exampleEdits = exampleData.choices?.[0]?.message?.content ?? '';
+    const exampleContent = exampleData.choices?.[0]?.message?.content ?? '{}';
+    
+    let parsedExample;
+    try {
+      parsedExample = JSON.parse(exampleContent);
+    } catch (err) {
+      console.error('Failed to parse example JSON:', err);
+      parsedExample = {};
+    }
 
     return {
       aspects,
       suggestions: suggestionsText,
-      exampleEdits,
+      exampleEdits: {
+        sceneTitle: parsedExample.sceneTitle || '',
+        revisedText: parsedExample.revisedText || '',
+        analysis: parsedExample.analysis || '',
+      },
     };
   },
 });
