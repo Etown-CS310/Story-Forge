@@ -30,10 +30,28 @@ export default function StoryPlay() {
   const mySessions = useQuery(api.ui.listMySessions, {});
   const [editingStoryId, setEditingStoryId] = React.useState<Id<'stories'> | null>(null);
   const [activeSessionId, setActiveSessionId] = React.useState<Id<'sessions'> | null>(null);
+  const rightRef = React.useRef<HTMLDivElement | null>(null);
   const ensure = useMutation(api.ui.ensureUser);
   React.useEffect(() => {
     void ensure();
   }, [ensure]);
+
+  // When the active view switches (editing a story or opening a session), scroll the right pane to top
+  React.useEffect(() => {
+    const el = rightRef.current;
+    if (!el) return;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const rect = el.getBoundingClientRect();
+        const offset = 100;
+        const target = Math.max(0, window.scrollY + rect.top - offset);
+        window.scrollTo({ top: target, behavior: 'smooth' });
+      } catch {
+        // ignore
+      }
+    }
+  }, [editingStoryId, activeSessionId]);
 
   return (
     <div
@@ -180,33 +198,37 @@ export default function StoryPlay() {
         }}
       />
       {editingStoryId ? (
-        <StoryEditor storyId={editingStoryId} onClose={() => setEditingStoryId(null)} />
+        <div ref={rightRef} className="lg:col-span-2">
+          <StoryEditor storyId={editingStoryId} onClose={() => setEditingStoryId(null)} />
+        </div>
       ) : activeSessionId ? (
         // Show the active session in the main area when we have one
-        <div className="lg:col-span-2">
+        <div ref={rightRef} className="lg:col-span-2">
           <SessionView sessionId={activeSessionId} closeActiveSession={setActiveSessionId} />
         </div>
       ) : (
-        <Card className="lg:col-span-2 shadow-lg border-slate-200 dark:border-slate-700">
-          <CardHeader className="border-b border-slate-100 dark:border-slate-700">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Sparkles className="w-5 h-5 text-purple-600" />
-              My Sessions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              {mySessions?.map((s) => (
-                <SessionTile key={s._id} session={s} />
-              ))}
-              {mySessions && mySessions.length === 0 && (
-                <div className="col-span-2 text-sm text-slate-500 dark:text-slate-400 text-center py-12">
-                  No sessions yet—start one from the Stories list.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <div ref={rightRef} className="lg:col-span-2">
+          <Card className="lg:col-span-2 shadow-lg border-slate-200 dark:border-slate-700">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-700">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                My Sessions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="grid md:grid-cols-2 gap-4">
+                {mySessions?.map((s) => (
+                  <SessionTile key={s._id} session={s} />
+                ))}
+                {mySessions && mySessions.length === 0 && (
+                  <div className="col-span-2 text-sm text-slate-500 dark:text-slate-400 text-center py-12">
+                    No sessions yet—start one from the Stories list.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

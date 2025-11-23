@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { Id } from '@/../convex/_generated/dataModel';
 import { api } from '@/../convex/_generated/api';
@@ -121,11 +121,6 @@ export default function SessionView({
 }
 
 function MessageList({ messages }: { messages: any[] }) {
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
   return (
     <div className="space-y-3">
       {messages.map((m) => (
@@ -134,7 +129,6 @@ function MessageList({ messages }: { messages: any[] }) {
           <MessageBubble key={m._id + '-msg'} role={m.role} author={m.author} content={m.content} />
         </React.Fragment>
       ))}
-      <div ref={bottomRef} />
     </div>
   );
 }
