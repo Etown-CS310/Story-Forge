@@ -258,7 +258,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     onChange={(e) => setNewChoiceLabel(e.target.value)}
                   />
                   <Textarea
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     rows={4}
                     placeholder="New scene content…"
                     value={newNodeContent}

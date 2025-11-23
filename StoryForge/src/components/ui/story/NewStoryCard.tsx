@@ -43,7 +43,7 @@ export default function NewStoryCard({ onCreated }: { onCreated?: () => void }) 
           className="bg-white dark:bg-slate-800"
         />
         <Textarea
-          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          className="w-full"
           rows={4}
           placeholder="Opening scene content…"
           value={rootContent}

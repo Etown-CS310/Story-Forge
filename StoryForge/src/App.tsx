@@ -3,7 +3,7 @@ import { useAuth } from '@workos-inc/authkit-react';
 import { Button } from './components/ui/button';
 import StoryPlay from './components/ui/storyplay';
 import ThemeToggle from './components/ThemeToggle';
-import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { TooltipProvider } from './components/ui/tooltip';
 
 export default function App() {
   return (

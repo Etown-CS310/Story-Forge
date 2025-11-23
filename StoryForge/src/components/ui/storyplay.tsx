@@ -47,8 +47,8 @@ export default function StoryPlay() {
         const offset = 100;
         const target = Math.max(0, window.scrollY + rect.top - offset);
         window.scrollTo({ top: target, behavior: 'smooth' });
-      } catch {
-        // ignore
+      } catch (error) {
+        console.warn('Scroll to element failed:', error);
       }
     }
   }, [editingStoryId, activeSessionId]);
