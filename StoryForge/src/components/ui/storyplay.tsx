@@ -163,7 +163,11 @@ export default function StoryPlay() {
           setEditingStoryId(null);
         }}
       >
-        <NewStoryCard />
+        <NewStoryCard
+          onCreated={() => {
+            setShowNewStoryModal(false); // CLOSE THE MODAL
+          }}
+        />
       </StoryDialog>
 
       <StoryDialog

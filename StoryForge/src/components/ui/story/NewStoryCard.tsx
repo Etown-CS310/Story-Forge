@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 
-export default function NewStoryCard() {
+export default function NewStoryCard({ onCreated }: { onCreated?: () => void }) {
   const createStory = useMutation(api.ui.createStory);
   const [title, setTitle] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
@@ -64,7 +64,7 @@ export default function NewStoryCard() {
           onClick={() => {
             void (async () => {
               setSubmitting(true);
-              await createStory({
+              const story = await createStory({
                 title: title.trim(),
                 summary: summary.trim() || undefined,
                 rootContent: rootContent.trim(),
@@ -77,6 +77,7 @@ export default function NewStoryCard() {
               setRootContent('');
               setIsPublic(false);
               setSubmitting(false);
+              onCreated?.();
             })();
           }}
           variant="blue"
