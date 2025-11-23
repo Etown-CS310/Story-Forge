@@ -526,7 +526,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             : 'border-slate-200 dark:border-slate-700'
         } p-6 relative focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900`}
         style={{ 
-          height: '600px',
+          height: '70vh',
           cursor: isDragging ? 'grabbing' : 'grab',
           overflow: 'hidden',
           position: 'relative',
