@@ -49,16 +49,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     isDarkMode 
   });
 
-  // Reset auto-fit flag AND scale/position when dark mode changes
-  useEffect(() => {
-    setHasAutoFitted(false);
-    // Reset to default values while we recalculate
-    setScale(1);
-    setBaseScale(1);
-    setPosition({ x: 0, y: 0 });
-    setInitialPosition({ x: 0, y: 0 });
-  }, [isDarkMode]);
-
   useEffect(() => {
     if (!data || !mermaidRef.current) return;
 
@@ -137,19 +127,26 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
               if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
                 const scaleX = (containerRect.width * 0.9) / svgRect.width;
                 const scaleY = (containerRect.height * 0.9) / svgRect.height;
-                fitScale = Math.min(scaleX, scaleY, 3); // Allow up to 300% if content is small
+                fitScale = Math.min(scaleX, scaleY, 3);
+                
+                // Ensure minimum scale
+                fitScale = Math.max(fitScale, 0.1);
               }
               
-              // Center the content
+              // Center the content properly
+              // We need to account for the SVG's original position before scaling
               const scaledWidth = svgRect.width * fitScale;
               const scaledHeight = svgRect.height * fitScale;
+              
+              // Center based on the container's dimensions
               const centerX = (containerRect.width - scaledWidth) / 2;
               const centerY = (containerRect.height - scaledHeight) / 2;
               
               setBaseScale(fitScale); // This becomes our "100%"
               setScale(fitScale);
-              setPosition({ x: centerX, y: centerY });
-              setInitialPosition({ x: centerX, y: centerY }); // Store for reset
+              const centeredPosition = { x: centerX, y: centerY };
+              setPosition(centeredPosition);
+              setInitialPosition(centeredPosition); // Store for reset
               setHasAutoFitted(true);
             }
           }
@@ -164,28 +161,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
     void renderMermaid();
   }, [data, isDarkMode, hasAutoFitted]);
-
-  // Watch for window resize and re-fit
-  useEffect(() => {
-    if (!hasAutoFitted) return;
-
-    let resizeTimeout: NodeJS.Timeout;
-
-    const handleResize = () => {
-      // Debounce the resize event
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        setHasAutoFitted(false);
-      }, 250);
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(resizeTimeout);
-    };
-  }, [hasAutoFitted]);
 
   // Add native wheel listener to properly prevent scroll and handle zoom
   useEffect(() => {
@@ -218,16 +193,10 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
   // Reset view to optimal fit (only if user has manually adjusted)
   const resetView = useCallback(() => {
-    // Only reset if user has actually moved away from the optimal fit
-    const hasMovedFromOptimal = 
-      Math.abs(scale - baseScale) > 0.01 || 
-      Math.abs(position.x - initialPosition.x) > 1 || 
-      Math.abs(position.y - initialPosition.y) > 1;
-    
-    if (hasMovedFromOptimal) {
-      setHasAutoFitted(false);
-    }
-  }, [scale, baseScale, position, initialPosition]);
+    // Always reset to the initial fitted state
+    setScale(baseScale);
+    setPosition(initialPosition);
+  }, [baseScale, initialPosition]);
 
   // Zoom in/out buttons (relative to baseScale)
   const zoomIn = useCallback(() => {

@@ -102,13 +102,11 @@ Return your response as a JSON object with this exact structure:
     const exampleContent = exampleData.choices?.[0]?.message?.content ?? '{}';
     
     let parsedExample;
-    let parseFailed = false;
 
     try {
       parsedExample = JSON.parse(exampleContent);
     } catch (err) {
       console.error('Failed to parse example JSON:', err);
-      parseFailed = true;
 
       parsedExample = {
         sceneTitle: '',

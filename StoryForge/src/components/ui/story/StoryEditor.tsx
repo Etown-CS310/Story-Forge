@@ -118,10 +118,12 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   {isFullHeight ? (
                     <>
                       <ChevronsUp className="w-3 h-3" />
+                      Minimize
                     </>
                   ) : (
                     <>
                       <ChevronsDown className="w-3 h-3" />
+                      Expand
                     </>
                   )}
                 </Button>
@@ -196,19 +198,16 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
                   setNewSceneTitle(title || '');
-                  // Scroll to the Add Scene section, retrying if necessary
-                  const scrollToAddSceneSection = (attempt = 0) => {
+                  // Scroll to the Add Scene section
+                  requestAnimationFrame(() => {
                     const el = addSceneSectionRef.current;
                     if (el) {
                       el.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start',
                       });
-                    } else if (attempt < 5) {
-                      setTimeout(() => scrollToAddSceneSection(attempt + 1), 50);
                     }
-                  };
-                  scrollToAddSceneSection();
+                  });
                 }}
               />
               <div className="flex gap-3 items-center">

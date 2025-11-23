@@ -84,22 +84,22 @@ function truncate(text: string, maxLen: number): string {
 
 function escapeMermaidText(text: string): string {
   // Escape special characters for Mermaid text labels.
-  // Note: Escape & first so existing HTML entities (e.g., &lt;) become safe like &amp;lt;
-  // rather than being partially corrupted by later replacements.
+  // Important: Escape & first to avoid corrupting existing entities.
   return text
-    .replace(/&/g, '&amp;')        // Escape ampersand FIRST
-    .replace(/\n/g, ' ')           // Replace newlines with spaces
-    .replace(/\r/g, '')            // Remove carriage returns
-    .replace(/'/g, '&#39;')        // Escape single quotes
-    .replace(/#/g, '&#35;')        // Escape #
-    .replace(/"/g, '&#34;')        // Escape double quotes
-    .replace(/\[/g, '&#91;')       // Escape opening brackets
-    .replace(/\]/g, '&#93;')       // Escape closing brackets
-    .replace(/{/g, '&#123;')       // Escape opening braces
-    .replace(/}/g, '&#125;')       // Escape closing braces
-    .replace(/\(/g, '&#40;')       // Escape opening parentheses
-    .replace(/\)/g, '&#41;')       // Escape closing parentheses
-    .replace(/\|/g, '&#124;')      // Escape pipes
-    .replace(/</g, '&lt;')         // Escape less than
-    .replace(/>/g, '&gt;');        // Escape greater than
+    .replace(/&/g, '&amp;')         // Escape ampersand FIRST
+    .replace(/\n/g, ' ')            // Replace newlines with spaces
+    .replace(/\r/g, '')             // Remove carriage returns
+    .replace(/`/g, '&#96;')         // Escape backticks
+    .replace(/'/g, '&#39;')         // Escape single quotes
+    .replace(/#/g, '&#35;')         // Escape #
+    .replace(/"/g, '&#34;')         // Escape double quotes
+    .replace(/\[/g, '&#91;')        // Escape [
+    .replace(/\]/g, '&#93;')        // Escape ]
+    .replace(/{/g, '&#123;')        // Escape {
+    .replace(/}/g, '&#125;')        // Escape }
+    .replace(/\(/g, '&#40;')        // Escape (
+    .replace(/\)/g, '&#41;')        // Escape )
+    .replace(/\|/g, '&#124;')       // Escape |
+    .replace(/</g, '&lt;')          // Escape <
+    .replace(/>/g, '&gt;');         // Escape >
 }

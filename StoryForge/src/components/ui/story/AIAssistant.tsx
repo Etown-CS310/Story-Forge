@@ -26,7 +26,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string; title?: string }>>([]);
   const [error, setError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
-  const [expandLength, setExpandLength] = React.useState('2-3');
+  const [expandLength, setExpandLength] = React.useState('2-3 paragraphs');
   const [expandLengthError, setExpandLengthError] = React.useState<string>('');
   const [feedback, setFeedback] = React.useState('');
   const [feedbackResult, setFeedbackResult] = React.useState('');
@@ -50,7 +50,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
   const validateExpandLength = (value: string): boolean => {
     // Allow formats: "2", "2-3", "2-3 paragraphs"
-    const pattern = /^\d+(-\d+)?(\s+paragraph(s?)?)?$/i;
+    const pattern = /^\d+(-\d+)?(\s+paragraphs?)?$/i;
     return pattern.test(value.trim());
   };
 
@@ -254,9 +254,19 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
             onClick={() => setCollapsed(!collapsed)}
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-8 px-3"
           >
-            {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+            {collapsed ? (
+              <div className="flex items-center gap-1.5">
+                <ChevronDown className="w-4 h-4" />
+                <span className="text-sm text-muted-foreground">Expand</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <ChevronUp className="w-4 h-4" />
+                <span className="text-sm text-muted-foreground">Collapse</span>
+              </div>
+            )}
           </Button>
         </CardTitle>
       </CardHeader>
@@ -288,43 +298,21 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
             </div>
           )}
 
-          {/* 2x3 Grid Layout */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Row 1 */}
-            <Button onClick={() => { void handleSuggest(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />} Suggest
-            </Button>
+          {/* Improved Grid Layout */}
+          <div className="space-y-2">
+            {/* Row 1: Simple buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={() => { void handleSuggest(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2 h-10">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lightbulb className="w-4 h-4" />} Suggest
+              </Button>
 
-            <Button onClick={() => { void handleRewrite(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Rewrite
-            </Button>
-
-            {/* Row 2 */}
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="e.g. horror, mystery, humorous"
-                value={customTone}
-                onChange={(e) => setCustomTone(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    void handleTone();
-                  }
-                }}
-                disabled={loading}
-                className="flex-1"
-              />
-              <Button
-                onClick={() => { void handleTone(); }}
-                disabled={loading || !content.trim() || !customTone.trim()}
-                variant="outline"
-                className="gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />} Tone
+              <Button onClick={() => { void handleRewrite(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2 h-10">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Rewrite
               </Button>
             </div>
 
-            <div className="flex flex-col gap-1">
+            {/* Row 2: Tone and Expand */}
+            <div className="grid grid-cols-2 gap-2">
               <div className="flex gap-2">
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-slate-600 dark:text-slate-400 font-medium ml-1">
@@ -355,42 +343,76 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                   variant="outline" 
                   className="gap-2 self-end"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Expand
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />}
                 </Button>
               </div>
-              {expandLengthError && (
-                <span className="text-xs text-red-600 dark:text-red-400 ml-1">{expandLengthError}</span>
-              )}
+
+              <div className="flex flex-col gap-1">
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="2-3"
+                    value={expandLength}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setExpandLength(value);
+
+                      if (!value) {
+                        setExpandLengthError('Using default');
+                      } else if (!validateExpandLength(value)) {
+                        setExpandLengthError('Use: N or N-M');
+                      } else {
+                        setExpandLengthError('');
+                      }
+                    }}
+                    disabled={loading}
+                    className={`flex-1 h-10 ${expandLengthError ? 'border-red-500 dark:border-red-500' : ''}`}
+                  />
+                  <Button 
+                    onClick={() => { void handleEnhance(); }} 
+                    disabled={loading || !content.trim() || !!expandLengthError} 
+                    variant="outline" 
+                    className="gap-2 h-10 px-3 shrink-0"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  </Button>
+                </div>
+                {expandLengthError && (
+                  <span className="text-xs text-red-600 dark:text-red-400 ml-1">{expandLengthError}</span>
+                )}
+              </div>
             </div>
 
-            {/* Row 3 */}
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Your feedback..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    void handleFeedback();
-                  }
-                }}
-                disabled={loading}
-                className="flex-1"
-              />
-              <Button 
-                onClick={() => { void handleFeedback(); }} 
-                disabled={loading || !feedback.trim() || !content.trim()} 
-                variant="outline" 
-                className="gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />} Feedback
+            {/* Row 3: Feedback and Generate */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Your feedback..."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void handleFeedback();
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex-1 h-10"
+                />
+                <Button 
+                  onClick={() => { void handleFeedback(); }} 
+                  disabled={loading || !feedback.trim() || !content.trim()} 
+                  variant="outline" 
+                  className="gap-2 h-10 px-3 shrink-0"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                </Button>
+              </div>
+
+              <Button onClick={() => { void handleGenerateChoices(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2 h-10">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Generate Choices
               </Button>
             </div>
-
-            <Button onClick={() => { void handleGenerateChoices(); }} disabled={loading || !content.trim()} variant="outline" className="gap-2">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Generate Choices
-            </Button>
           </div>
 
           {suggestions && (
