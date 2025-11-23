@@ -3,6 +3,7 @@ import { useAuth } from '@workos-inc/authkit-react';
 import { Button } from './components/ui/button';
 import StoryPlay from './components/ui/storyplay';
 import ThemeToggle from './components/ThemeToggle';
+import { TooltipProvider } from '@radix-ui/react-tooltip';
 
 export default function App() {
   return (
@@ -33,7 +34,9 @@ export default function App() {
 
           <Authenticated>
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-3">
-              <StoryPlay />
+              <TooltipProvider>
+                <StoryPlay />
+              </TooltipProvider>
             </div>
           </Authenticated>
 

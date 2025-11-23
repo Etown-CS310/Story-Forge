@@ -61,9 +61,7 @@ export default function StoryPlay() {
       }
     >
       <Card
-        className={
-          `self-start shadow-lg border-slate-200 dark:border-slate-700 transition-all duration-300 lg:col-span-1`
-        }
+        className={`self-start shadow-lg border-slate-200 dark:border-slate-700 transition-all duration-300 lg:col-span-1`}
       >
         <CardHeader className="border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center justify-between">
@@ -120,6 +118,7 @@ export default function StoryPlay() {
           <CardContent className="pt-4 flex flex-col items-center gap-6">
             <StoryDialogTooltip label="Create New Story">
               <button
+                style={{ cursor: 'pointer' }}
                 onClick={() => setShowNewStoryModal(true)}
                 className="text-slate-600 dark:text-slate-300 hover:text-blue-500"
               >
@@ -129,6 +128,7 @@ export default function StoryPlay() {
 
             <StoryDialogTooltip label="Search Stories">
               <button
+                style={{ cursor: 'pointer' }}
                 onClick={() => setShowSearchModal(true)}
                 className="text-slate-600 dark:text-slate-300 hover:text-blue-500"
               >
@@ -138,6 +138,7 @@ export default function StoryPlay() {
 
             <StoryDialogTooltip label="All Stories">
               <button
+                style={{ cursor: 'pointer' }}
                 onClick={() => setShowStoryListModal(true)}
                 className="text-slate-600 dark:text-slate-300 hover:text-blue-500"
               >
