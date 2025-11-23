@@ -313,40 +313,32 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
 
             {/* Row 2: Tone and Expand */}
             <div className="grid grid-cols-2 gap-2">
+              {/* LEFT SIDE: TONE */}
               <div className="flex gap-2">
-                <div className="flex-1 space-y-1">
-                  <label className="text-xs text-slate-600 dark:text-slate-400 font-medium ml-1">
-                    Target length:
-                  </label>
-                  <Input
-                    type="text"
-                    placeholder="e.g. 2-3 paragraphs"
-                    value={expandLength}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setExpandLength(value);
-                      
-                      // Validate in real-time
-                      if (value && !validateExpandLength(value)) {
-                        setExpandLengthError('Use: N, N-M, or N-M paragraphs');
-                      } else {
-                        setExpandLengthError('');
-                      }
-                    }}
-                    disabled={loading}
-                    className={expandLengthError ? 'border-red-500 dark:border-red-500' : ''}
-                  />
-                </div>
-                <Button 
-                  onClick={() => { void handleEnhance(); }} 
-                  disabled={loading || !content.trim() || !!expandLengthError} 
-                  variant="outline" 
-                  className="gap-2 self-end"
+                <Input
+                  type="text"
+                  placeholder="e.g. horror, mystery"
+                  value={customTone}
+                  onChange={(e) => setCustomTone(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void handleTone();
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex-1 h-10"
+                />
+                <Button
+                  onClick={() => { void handleTone(); }}
+                  disabled={loading || !content.trim() || !customTone.trim()}
+                  variant="outline"
+                  className="gap-2 h-10 px-3 shrink-0"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PenLine className="w-4 h-4" />}
                 </Button>
               </div>
 
+              {/* RIGHT SIDE: EXPAND */}
               <div className="flex flex-col gap-1">
                 <div className="flex gap-2">
                   <Input
