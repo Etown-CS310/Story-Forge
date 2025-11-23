@@ -332,7 +332,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                   </label>
                   <Input
                     type="text"
-                    placeholder="e.g. 2-3, 1-2 paragraphs"
+                    placeholder="e.g. 2-3 paragraphs"
                     value={expandLength}
                     onChange={(e) => {
                       const value = e.target.value;
