@@ -62,8 +62,7 @@ export default function StoryPlay() {
     >
       <Card
         className={
-          `self-start shadow-lg border-slate-200 dark:border-slate-700 transition-all duration-300 ` +
-          (sidebarOpen ? 'lg:col-span-1' : 'lg:col-span-1')
+          `self-start shadow-lg border-slate-200 dark:border-slate-700 transition-all duration-300 lg:col-span-1`
         }
       >
         <CardHeader className="border-b border-slate-100 dark:border-slate-700">
