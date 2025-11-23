@@ -101,8 +101,8 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
           
-          // Wait longer for the browser to fully render and layout the SVG
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Wait for the browser to fully render and layout the SVG using requestAnimationFrame
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           
           // Auto-fit on first render or after theme change
           if (!hasAutoFitted && containerRef.current) {
