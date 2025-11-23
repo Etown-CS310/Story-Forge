@@ -49,9 +49,14 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     isDarkMode 
   });
 
-  // Reset auto-fit flag when dark mode changes to allow re-fitting with new theme
+  // Reset auto-fit flag AND scale/position when dark mode changes
   useEffect(() => {
     setHasAutoFitted(false);
+    // Reset to default values while we recalculate
+    setScale(1);
+    setBaseScale(1);
+    setPosition({ x: 0, y: 0 });
+    setInitialPosition({ x: 0, y: 0 });
   }, [isDarkMode]);
 
   useEffect(() => {
@@ -96,16 +101,22 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
           
-          // Auto-fit on first render
+          // Wait longer for the browser to fully render and layout the SVG
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Auto-fit on first render or after theme change
           if (!hasAutoFitted && containerRef.current) {
             const svgElement = mermaidRef.current.querySelector('svg');
             if (svgElement) {
+              // Force a reflow to ensure we get accurate dimensions
+              svgElement.getBoundingClientRect();
+              
               const svgRect = svgElement.getBoundingClientRect();
               const containerRect = containerRef.current.getBoundingClientRect();
               
               // Calculate scale to fit (with some padding)
               let fitScale = 1;
-              if (svgRect.width > 0 && svgRect.height > 0) {
+              if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
                 const scaleX = (containerRect.width * 0.9) / svgRect.width;
                 const scaleY = (containerRect.height * 0.9) / svgRect.height;
                 fitScale = Math.min(scaleX, scaleY, 3); // Allow up to 300% if content is small
@@ -177,7 +188,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * 3)); // Max 300%
     }
   }, [baseScale]);
-
+  
   const zoomOut = useCallback(() => {
     if (baseScale > 0) {
       const minZoom = Math.max(0.1, baseScale * 0.1); // Ensure reasonable minimum
@@ -322,18 +333,61 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     }
   };
 
-  const downloadSVG = () => {
-    const svg = mermaidRef.current?.querySelector('svg');
-    if (!svg || !data) return;
+  const downloadSVG = async () => {
+    const currentSvg = mermaidRef.current?.querySelector('svg');
+    if (!currentSvg || !data) return;
     
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([svgData], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
-    link.click();
-    URL.revokeObjectURL(url);
+    // If we're in dark mode, temporarily render light mode version for download
+    if (isDarkMode) {
+      try {
+        const mermaid = (await import('mermaid')).default;
+        
+        // Initialize with light theme
+        mermaid.initialize({ 
+          startOnLoad: false,
+          theme: 'default',
+          flowchart: {
+            curve: 'basis',
+            padding: 20,
+            nodeSpacing: 50,
+            rankSpacing: 50,
+          }
+        });
+        
+        // Render light mode version
+        const { svg: lightSvg } = await mermaid.render('mermaid-download', data.mermaid);
+        
+        // Download the light version
+        const blob = new Blob([lightSvg], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Failed to generate light mode SVG:', err);
+        // Fallback to current SVG if light mode generation fails
+        const svgData = new XMLSerializer().serializeToString(currentSvg);
+        const blob = new Blob([svgData], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } else {
+      // Already in light mode, download current SVG
+      const svgData = new XMLSerializer().serializeToString(currentSvg);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   if (!data) {
@@ -376,7 +430,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           </button>
 
           <button
-            onClick={downloadSVG}
+            onClick={() => { void downloadSVG(); }}
             className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
           >
             ⬇️ Download
