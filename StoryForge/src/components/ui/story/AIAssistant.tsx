@@ -349,10 +349,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                       const value = e.target.value;
                       setExpandLength(value);
 
-                      if (!value) {
-                        setExpandLengthError('Using default');
-                      } else if (!validateExpandLength(value)) {
-                        setExpandLengthError('Use: N or N-M');
+                      if (!validateExpandLength(value)) {
+                        setExpandLengthError('Use: N, N-M, or N-M paragraphs');
                       } else {
                         setExpandLengthError('');
                       }

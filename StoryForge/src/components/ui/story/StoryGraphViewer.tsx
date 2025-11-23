@@ -96,18 +96,30 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           if (svgElement) {
             const start = performance.now();
             await new Promise(resolve => {
+              let resolved = false;
+              
               function check() {
-                if (!svgElement) return resolve(undefined);
+                if (resolved) return; // Stop if already resolved
+                
+                if (!svgElement) {
+                  resolved = true;
+                  resolve(undefined);
+                  return;
+                }
+                
                 const rect = svgElement.getBoundingClientRect();
                 if (rect.width > 0 && rect.height > 0) {
+                  resolved = true;
                   resolve(undefined);
                 } else if (performance.now() - start > 500) {
                   // Timeout after 500ms
+                  resolved = true;
                   resolve(undefined);
                 } else {
                   requestAnimationFrame(check);
                 }
               }
+              
               check();
             });
           }
@@ -191,7 +203,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     };
   }, [baseScale]);
 
-  // Reset view to optimal fit (only if user has manually adjusted)
+  // Reset view to initial fitted state (regardless of user adjustment)
   const resetView = useCallback(() => {
     // Always reset to the initial fitted state
     setScale(baseScale);
@@ -443,7 +455,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           </button>
 
           <button
-            onClick={() => { void downloadSVG(); }}
+            onClick={() => { void downloadSVG().catch((err) => { console.error('Failed to download SVG:', err); }); }}
             className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
           >
             ⬇️ Download

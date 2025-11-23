@@ -34,9 +34,16 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
   const aiAssistantKey = selectedNodeId ?? 'no-node';
 
+  // Reset to root node and graph view when story changes
   React.useEffect(() => {
     if (!graph) return;
-    if (!selectedNodeId && graph.rootNodeId) setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
+    setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
+    setViewMode('graph');
+  }, [storyId, graph]);
+
+  // Update content when selected node changes
+  React.useEffect(() => {
+    if (!graph) return;
     const sel = graph.nodes.find((n: any) => n._id === selectedNodeId);
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
