@@ -93,7 +93,7 @@ export const createNodeAndEdge = mutation({
     const nodeId = await ctx.db.insert('nodes', {
       storyId,
       role: 'narrator',
-      title: title || 'Untitled Scene',  // ← Use provided title or default
+      title: title ?? 'Untitled Scene',  // ← Use provided title or default only when undefined/null
       content,
       metadata: {},
       version: 1,

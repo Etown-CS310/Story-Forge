@@ -83,12 +83,14 @@ function truncate(text: string, maxLen: number): string {
 }
 
 function escapeMermaidText(text: string): string {
-  // Replace problematic characters that can break Mermaid syntax
-  // IMPORTANT: Escape & FIRST, before creating any &#...; entities
+  // Escape special characters for Mermaid text labels.
+  // Note: Escape & first so existing HTML entities (e.g., &lt;) become safe like &amp;lt;
+  // rather than being partially corrupted by later replacements.
   return text
     .replace(/&/g, '&amp;')        // Escape ampersand FIRST
     .replace(/\n/g, ' ')           // Replace newlines with spaces
     .replace(/\r/g, '')            // Remove carriage returns
+    .replace(/'/g, '&#39;')        // Escape single quotes
     .replace(/#/g, '&#35;')        // Escape #
     .replace(/"/g, '&#34;')        // Escape double quotes
     .replace(/\[/g, '&#91;')       // Escape opening brackets

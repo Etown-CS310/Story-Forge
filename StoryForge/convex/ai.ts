@@ -102,13 +102,17 @@ Return your response as a JSON object with this exact structure:
     const exampleContent = exampleData.choices?.[0]?.message?.content ?? '{}';
     
     let parsedExample;
+    let parseFailed = false;
+
     try {
       parsedExample = JSON.parse(exampleContent);
     } catch (err) {
       console.error('Failed to parse example JSON:', err);
+      parseFailed = true;
+
       parsedExample = {
         sceneTitle: '',
-        revisedText: exampleContent,
+        revisedText: '',
         analysis: ''
       };
     }
@@ -192,25 +196,28 @@ export const enhanceContent = action({
 
     // Parse the target length (e.g., "2-3", "1-2", "3-5 paragraphs")
     // Check if "paragraph" is already in the input to avoid duplication
+    const getLengthInstruction = (targetLength: string): string => {
+      if (/\bparagraphs?\b/i.test(targetLength)) {
+        return `Expand to approximately ${targetLength}`;
+      }
+      
+      const singleMatch = targetLength.match(/^\s*(\d+)\s*$/);
+      if (singleMatch) {
+        const num = parseInt(singleMatch[1], 10);
+        const word = num === 1 ? 'paragraph' : 'paragraphs';
+        return `Expand to approximately ${targetLength} ${word}`;
+      }
+      
+      const rangeMatch = targetLength.match(/^\s*\d+\s*-\s*\d+\s*$/);
+      if (rangeMatch) {
+        return `Expand to approximately ${targetLength} paragraphs`;
+      }
+      
+      return `Expand to approximately ${targetLength} paragraphs`;
+    };
+
     const lengthInstruction = targetLength 
-      ? (/\bparagraphs?\b/i.test(targetLength)
-          ? `Expand to approximately ${targetLength}`
-          : (() => {
-              // Check if targetLength is a single number (e.g., "1")
-              const numMatch = targetLength.match(/^\s*(\d+)\s*$/);
-              if (numMatch) {
-                const num = parseInt(numMatch[1], 10);
-                const paraWord = num === 1 ? 'paragraph' : 'paragraphs';
-                return `Expand to approximately ${targetLength} ${paraWord}`;
-              }
-              // Check if targetLength is a range (e.g., "1-2")
-              const rangeMatch = targetLength.match(/^\s*\d+\s*-\s*\d+\s*$/);
-              if (rangeMatch) {
-                return `Expand to approximately ${targetLength} paragraphs`;
-              }
-              // Default to plural
-              return `Expand to approximately ${targetLength} paragraphs`;
-            })())
+      ? getLengthInstruction(targetLength)
       : 'Expand by approximately 50-100%';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

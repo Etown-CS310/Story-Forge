@@ -101,8 +101,26 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
           
-          // Wait for the browser to fully render and layout the SVG using requestAnimationFrame
-          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          // Wait for the browser to fully render and layout the SVG by polling for non-zero dimensions (max 500ms)
+          const svgElement = mermaidRef.current.querySelector('svg');
+          if (svgElement) {
+            const start = performance.now();
+            await new Promise(resolve => {
+              function check() {
+                if (!svgElement) return resolve(undefined);
+                const rect = svgElement.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                  resolve(undefined);
+                } else if (performance.now() - start > 500) {
+                  // Timeout after 500ms
+                  resolve(undefined);
+                } else {
+                  requestAnimationFrame(check);
+                }
+              }
+              check();
+            });
+          }
           
           // Auto-fit on first render or after theme change
           if (!hasAutoFitted && containerRef.current) {
