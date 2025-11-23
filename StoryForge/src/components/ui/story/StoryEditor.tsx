@@ -173,7 +173,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 </Button>
               </div>
               <Textarea
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 rows={8}
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
