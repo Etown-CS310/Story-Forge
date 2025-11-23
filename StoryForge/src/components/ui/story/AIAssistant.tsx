@@ -184,11 +184,14 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         
         if (validChoices.length === 0) {
           setError('AI generated choices but none had valid label and description fields');
+          setLoading(false);
           return;
         }
         
         setGeneratedChoices(validChoices);
         setResult(`Generated ${validChoices.length} choice suggestion${validChoices.length === 1 ? '' : 's'}. Click "Add to Story" buttons below to add them.`);
+      } else {
+        setError('AI did not return any choices. Please try again or check your input.');
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
@@ -259,12 +262,6 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     const altTitleMatch = text.match(/Scene Title:\s*(.+?)(?:\n|$)/i);
     if (altTitleMatch) {
       return altTitleMatch[1].trim();
-    }
-    
-    // Additional fallback: look for any line ending with a colon (potential title marker)
-    const colonTitleMatch = text.match(/^(.+?):\s*$/im);
-    if (colonTitleMatch && colonTitleMatch[1].length < 100) {
-      return colonTitleMatch[1].trim();
     }
     
     // Fallback: use the first non-empty line if it looks like a title
