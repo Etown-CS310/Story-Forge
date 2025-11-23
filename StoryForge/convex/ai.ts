@@ -191,7 +191,22 @@ export const enhanceContent = action({
     const lengthInstruction = targetLength 
       ? (/\bparagraphs?\b/i.test(targetLength)
           ? `Expand to approximately ${targetLength}`
-          : `Expand to approximately ${targetLength} paragraphs`)
+          : (() => {
+              // Check if targetLength is a single number (e.g., "1")
+              const numMatch = targetLength.match(/^\s*(\d+)\s*$/);
+              if (numMatch) {
+                const num = parseInt(numMatch[1], 10);
+                const paraWord = num === 1 ? 'paragraph' : 'paragraphs';
+                return `Expand to approximately ${targetLength} ${paraWord}`;
+              }
+              // Check if targetLength is a range (e.g., "1-2")
+              const rangeMatch = targetLength.match(/^\s*\d+\s*-\s*\d+\s*$/);
+              if (rangeMatch) {
+                return `Expand to approximately ${targetLength} paragraphs`;
+              }
+              // Default to plural
+              return `Expand to approximately ${targetLength} paragraphs`;
+            })())
       : 'Expand by approximately 50-100%';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
