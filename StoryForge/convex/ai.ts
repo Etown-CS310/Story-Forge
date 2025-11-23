@@ -174,8 +174,11 @@ export const enhanceContent = action({
     const apiKey = getApiKey();
 
     // Parse the target length (e.g., "2-3", "1-2", "3-5 paragraphs")
+    // Check if "paragraph" is already in the input to avoid duplication
     const lengthInstruction = targetLength 
-      ? `Expand to approximately ${targetLength} paragraphs` 
+      ? (/\bparagraphs?\b/i.test(targetLength)
+          ? `Expand to approximately ${targetLength}`
+          : `Expand to approximately ${targetLength} paragraphs`)
       : 'Expand by approximately 50-100%';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

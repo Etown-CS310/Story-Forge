@@ -83,5 +83,19 @@ function truncate(text: string, maxLen: number): string {
 }
 
 function escapeMermaidText(text: string): string {
-  return text.replace(/"/g, '&quot;');
+  // Replace problematic characters that can break Mermaid syntax
+  return text
+    .replace(/\n/g, ' ')           // Replace newlines with spaces
+    .replace(/\r/g, '')            // Remove carriage returns
+    .replace(/"/g, '#quot;')       // Escape double quotes
+    .replace(/\[/g, '#91;')        // Escape opening brackets
+    .replace(/\]/g, '#93;')        // Escape closing brackets
+    .replace(/{/g, '#123;')        // Escape opening braces
+    .replace(/}/g, '#125;')        // Escape closing braces
+    .replace(/\(/g, '#40;')        // Escape opening parentheses
+    .replace(/\)/g, '#41;')        // Escape closing parentheses
+    .replace(/#(?!\d+;)/g, '#35;') // Escape # that aren't part of HTML entities
+    .replace(/\|/g, '#124;')       // Escape pipes
+    .replace(/</g, '&lt;')         // Escape less than
+    .replace(/>/g, '&gt;');        // Escape greater than
 }
