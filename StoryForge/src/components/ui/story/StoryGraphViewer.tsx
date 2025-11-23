@@ -146,7 +146,10 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       // Handle zoom directly here
       const delta = e.deltaY * -0.001;
       setScale(prevScale => {
-        const newScale = Math.min(Math.max(baseScale * 0.1, prevScale + delta * baseScale), baseScale * 3);
+        const safeBaseScale = baseScale > 0 ? baseScale : 1;
+        const minZoom = Math.max(0.1, safeBaseScale * 0.1); // Ensure reasonable minimum
+        const maxZoom = safeBaseScale * 3;
+        const newScale = Math.min(Math.max(minZoom, prevScale + delta * safeBaseScale), maxZoom);
         return newScale;
       });
     };
@@ -158,6 +161,56 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       container.removeEventListener('wheel', handleNativeWheel);
     };
   }, [baseScale]);
+
+  // Keyboard navigation for accessibility
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const panStep = 50;
+      const zoomStep = 0.1;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x, y: pos.y + panStep }));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x, y: pos.y - panStep }));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x + panStep, y: pos.y }));
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x - panStep, y: pos.y }));
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+        case '_':
+          e.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          resetView();
+          break;
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      container.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [baseScale, scale, position]);
 
   // Handle mouse drag
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -195,20 +248,24 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   // Zoom in/out buttons (relative to baseScale)
   const zoomIn = () => {
     if (baseScale > 0) {
-      setScale(Math.min(scale + baseScale * 0.1, baseScale * 3)); // Max 300%
+      const safeBaseScale = baseScale > 0 ? baseScale : 1;
+      setScale(Math.min(scale + safeBaseScale * 0.1, safeBaseScale * 3)); // Max 300%
     }
   };
   
   const zoomOut = () => {
     if (baseScale > 0) {
-      setScale(Math.max(scale - baseScale * 0.1, baseScale * 0.1)); // Min 10%
+      const safeBaseScale = baseScale > 0 ? baseScale : 1;
+      const minZoom = Math.max(0.1, safeBaseScale * 0.1); // Ensure reasonable minimum
+      setScale(Math.max(scale - safeBaseScale * 0.1, minZoom)); // Min 10% or 0.1, whichever is larger
     }
   };
 
   // Handle zoom input
   const handleZoomClick = () => {
     setIsEditingZoom(true);
-    setZoomInput(Math.round((scale / baseScale) * 100).toString());
+    const safeBaseScale = baseScale > 0 ? baseScale : 1;
+    setZoomInput(Math.round((scale / safeBaseScale) * 100).toString());
   };
 
   const handleZoomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,6 +287,9 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
       setScale((clamped / 100) * baseScale);
       setZoomInput(clamped.toString());
+    } else {
+      // Revert to current zoom if input was invalid
+      setZoomInput(Math.round((scale / baseScale) * 100).toString());
     }
 
     setIsEditingZoom(false);
@@ -240,7 +300,11 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       handleZoomInputBlur();
     } else if (e.key === 'Escape') {
       setIsEditingZoom(false);
-      setZoomInput(Math.round((scale / baseScale) * 100).toString());
+      if (baseScale > 0) {
+        setZoomInput(Math.round((scale / baseScale) * 100).toString());
+      } else {
+        setZoomInput('100');
+      }
     }
   };
 
@@ -326,6 +390,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           onClick={zoomOut}
           className="px-4 py-2.5 text-base font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
           title="Zoom out"
+          aria-label="Zoom out"
         >
           −
         </button>
@@ -340,20 +405,23 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             min="10"
             max="300"
             className="w-[80px] px-3 py-2 text-sm text-center border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            aria-label="Zoom percentage input"
           />
         ) : (
           <button
             onClick={handleZoomClick}
             className="min-w-[80px] px-3 py-2 text-sm text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-600"
             title="Click to enter zoom level"
+            aria-label="Current zoom level, click to edit"
           >
-            {Math.round((scale / (baseScale || 1)) * 100)}%
+            {Math.round((scale / (baseScale > 0 ? baseScale : 1)) * 100)}%
           </button>
         )}
         <button
           onClick={zoomIn}
           className="px-4 py-2.5 text-base font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
           title="Zoom in"
+          aria-label="Zoom in"
         >
           +
         </button>
@@ -361,11 +429,12 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           onClick={resetView}
           className="px-4 py-2 text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
           title="Reset to 100%"
+          aria-label="Reset view to 100%"
         >
           Reset
         </button>
         <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-          💡 {isHovering ? '🎯 Scroll to zoom' : 'Hover over graph to zoom with scroll'}, drag to pan
+          💡 {isHovering ? '🎯 Scroll to zoom' : 'Hover over graph to zoom with scroll'}, drag to pan, or use arrow keys
         </span>
       </div>
 
@@ -387,6 +456,9 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onMouseEnter={handleMouseEnter}
+        tabIndex={0}
+        role="img"
+        aria-label={`Interactive graph view of ${data.title} with ${data.nodeCount} scenes and ${data.edgeCount} paths. Use arrow keys to pan, plus and minus keys to zoom, and 0 to reset view.`}
       >
         {loading && (
           <div className="flex items-center justify-center p-12">
