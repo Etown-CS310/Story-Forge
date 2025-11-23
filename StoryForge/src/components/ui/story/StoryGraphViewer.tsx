@@ -49,6 +49,11 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     isDarkMode 
   });
 
+  // Reset auto-fit flag when dark mode changes to allow re-fitting with new theme
+  useEffect(() => {
+    setHasAutoFitted(false);
+  }, [isDarkMode]);
+
   useEffect(() => {
     if (!data || !mermaidRef.current) return;
 
@@ -154,8 +159,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     };
   }, [baseScale]);
 
-  // This is now handled by the native event listener
-
   // Handle mouse drag
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -190,8 +193,17 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   };
 
   // Zoom in/out buttons (relative to baseScale)
-  const zoomIn = () => setScale(Math.min(scale + baseScale * 0.1, baseScale * 3)); // Max 300%
-  const zoomOut = () => setScale(Math.max(scale - baseScale * 0.1, baseScale * 0.1)); // Min 10%
+  const zoomIn = () => {
+    if (baseScale > 0) {
+      setScale(Math.min(scale + baseScale * 0.1, baseScale * 3)); // Max 300%
+    }
+  };
+  
+  const zoomOut = () => {
+    if (baseScale > 0) {
+      setScale(Math.max(scale - baseScale * 0.1, baseScale * 0.1)); // Min 10%
+    }
+  };
 
   // Handle zoom input
   const handleZoomClick = () => {
@@ -335,7 +347,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             className="min-w-[80px] px-3 py-2 text-sm text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-600"
             title="Click to enter zoom level"
           >
-            {Math.round((scale / baseScale) * 100)}%
+            {Math.round((scale / (baseScale || 1)) * 100)}%
           </button>
         )}
         <button
