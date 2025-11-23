@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Edit, Link, Plus, Save, Trash2, X, Network, Maximize2, Minimize2 } from 'lucide-react';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
+import { Textarea } from '../textarea';
 
 export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories'>; onClose: () => void }) {
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
@@ -171,7 +172,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   Save Title
                 </Button>
               </div>
-              <textarea
+              <Textarea
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 rows={8}
                 value={nodeContent}
@@ -257,7 +258,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     value={newChoiceLabel}
                     onChange={(e) => setNewChoiceLabel(e.target.value)}
                   />
-                  <textarea
+                  <Textarea
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     rows={4}
                     placeholder="New scene content…"

@@ -4,6 +4,7 @@ import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function NewStoryCard() {
   const createStory = useMutation(api.ui.createStory);
@@ -41,7 +42,7 @@ export default function NewStoryCard() {
           onChange={(e) => setNodeTitle(e.target.value)}
           className="bg-white dark:bg-slate-800"
         />
-        <textarea
+        <Textarea
           className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           rows={4}
           placeholder="Opening scene content…"
