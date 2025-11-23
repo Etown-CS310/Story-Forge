@@ -106,7 +106,11 @@ Return your response as a JSON object with this exact structure:
       parsedExample = JSON.parse(exampleContent);
     } catch (err) {
       console.error('Failed to parse example JSON:', err);
-      parsedExample = {};
+      parsedExample = {
+        sceneTitle: '',
+        revisedText: exampleContent,
+        analysis: ''
+      };
     }
 
     return {
