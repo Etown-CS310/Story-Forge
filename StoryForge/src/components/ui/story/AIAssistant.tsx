@@ -83,7 +83,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         setSuggestions(response.suggestions);
         setExampleEdits(response.exampleEdits);
       } else {
-        setError('AI did not return suggestions. Please try again or check your input.');
+        setError('AI response missing required fields (suggestions or exampleEdits). Please try again or check your input.');
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
