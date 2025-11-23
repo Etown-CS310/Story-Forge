@@ -538,7 +538,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         onMouseEnter={handleMouseEnter}
         tabIndex={0}
         role="img"
-        aria-label={`Interactive graph view of ${data.title} with ${data.nodeCount} scenes and ${data.edgeCount} paths. Use arrow keys to pan, plus and minus keys to zoom, and 0 to reset view.`}
+        aria-label={`Interactive graph view of ${data.title} containing ${data.nodeCount} scenes and ${data.edgeCount} paths. Use arrow keys to pan, plus and minus keys to zoom, and 0 to reset the view.`}
       >
         {loading && (
           <div className="flex items-center justify-center p-12">
