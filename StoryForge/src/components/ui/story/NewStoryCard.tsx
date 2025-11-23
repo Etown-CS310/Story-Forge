@@ -4,8 +4,9 @@ import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
-export default function NewStoryCard() {
+export default function NewStoryCard({ onCreated }: { onCreated?: () => void }) {
   const createStory = useMutation(api.ui.createStory);
   const [title, setTitle] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
@@ -41,8 +42,8 @@ export default function NewStoryCard() {
           onChange={(e) => setNodeTitle(e.target.value)}
           className="bg-white dark:bg-slate-800"
         />
-        <textarea
-          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+        <Textarea
+          className="w-full"
           rows={4}
           placeholder="Opening scene content…"
           value={rootContent}
@@ -63,7 +64,7 @@ export default function NewStoryCard() {
           onClick={() => {
             void (async () => {
               setSubmitting(true);
-              await createStory({
+              const story = await createStory({
                 title: title.trim(),
                 summary: summary.trim() || undefined,
                 rootContent: rootContent.trim(),
@@ -76,6 +77,7 @@ export default function NewStoryCard() {
               setRootContent('');
               setIsPublic(false);
               setSubmitting(false);
+              onCreated?.();
             })();
           }}
           variant="blue"
