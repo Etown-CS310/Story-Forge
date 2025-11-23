@@ -147,6 +147,28 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     void renderMermaid();
   }, [data, isDarkMode, hasAutoFitted]);
 
+  // Watch for window resize and re-fit
+  useEffect(() => {
+    if (!hasAutoFitted) return;
+
+    let resizeTimeout: NodeJS.Timeout;
+
+    const handleResize = () => {
+      // Debounce the resize event
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        setHasAutoFitted(false);
+      }, 250);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
+  }, [hasAutoFitted]);
+
   // Add native wheel listener to properly prevent scroll and handle zoom
   useEffect(() => {
     const container = containerRef.current;
@@ -176,11 +198,18 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     };
   }, [baseScale]);
 
-  // Reset view to fitted (100%)
+  // Reset view to optimal fit (only if user has manually adjusted)
   const resetView = useCallback(() => {
-    setScale(baseScale);
-    setPosition(initialPosition);
-  }, [baseScale, initialPosition]);
+    // Only reset if user has actually moved away from the optimal fit
+    const hasMovedFromOptimal = 
+      Math.abs(scale - baseScale) > 0.01 || 
+      Math.abs(position.x - initialPosition.x) > 1 || 
+      Math.abs(position.y - initialPosition.y) > 1;
+    
+    if (hasMovedFromOptimal) {
+      setHasAutoFitted(false);
+    }
+  }, [scale, baseScale, position, initialPosition]);
 
   // Zoom in/out buttons (relative to baseScale)
   const zoomIn = useCallback(() => {
@@ -468,7 +497,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             title="Click to enter zoom level"
             aria-label="Current zoom level, click to edit"
           >
-            {Math.round((scale / (baseScale > 0 ? baseScale : 1)) * 100)}%
+            {baseScale > 0 ? Math.round((scale / baseScale) * 100) : 100}%
           </button>
         )}
         <button
@@ -482,13 +511,13 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         <button
           onClick={resetView}
           className="px-4 py-2 text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors shadow-sm"
-          title="Reset to 100%"
-          aria-label="Reset view to 100%"
+          title="Reset to optimal fit"
+          aria-label="Reset view to optimal fit"
         >
           Reset
         </button>
         <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-          💡 {isHovering ? '🎯 Scroll to zoom' : 'Hover over graph to zoom with scroll'}, drag to pan, or use arrow keys
+          {isHovering ? 'Scroll to zoom' : 'Hover over graph to zoom with scroll'}, drag to pan, or use arrow keys
         </span>
       </div>
 
@@ -498,7 +527,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           isHovering 
             ? 'border-purple-400 dark:border-purple-600' 
             : 'border-slate-200 dark:border-slate-700'
-        } p-6 relative`}
+        } p-6 relative focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900`}
         style={{ 
           height: '600px',
           cursor: isDragging ? 'grabbing' : 'grab',
