@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Id } from '@/../convex/_generated/dataModel';
@@ -104,9 +104,12 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
               const containerRect = containerRef.current.getBoundingClientRect();
               
               // Calculate scale to fit (with some padding)
-              const scaleX = (containerRect.width * 0.9) / svgRect.width;
-              const scaleY = (containerRect.height * 0.9) / svgRect.height;
-              const fitScale = Math.min(scaleX, scaleY, 3); // Allow up to 300% if content is small
+              let fitScale = 1;
+              if (svgRect.width > 0 && svgRect.height > 0) {
+                const scaleX = (containerRect.width * 0.9) / svgRect.width;
+                const scaleY = (containerRect.height * 0.9) / svgRect.height;
+                fitScale = Math.min(scaleX, scaleY, 3); // Allow up to 300% if content is small
+              }
               
               // Center the content
               const scaledWidth = svgRect.width * fitScale;
@@ -162,6 +165,26 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     };
   }, [baseScale]);
 
+  // Reset view to fitted (100%)
+  const resetView = useCallback(() => {
+    setScale(baseScale);
+    setPosition(initialPosition);
+  }, [baseScale, initialPosition]);
+
+  // Zoom in/out buttons (relative to baseScale)
+  const zoomIn = useCallback(() => {
+    if (baseScale > 0) {
+      setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * 3)); // Max 300%
+    }
+  }, [baseScale]);
+
+  const zoomOut = useCallback(() => {
+    if (baseScale > 0) {
+      const minZoom = Math.max(0.1, baseScale * 0.1); // Ensure reasonable minimum
+      setScale(prevScale => Math.max(prevScale - baseScale * 0.1, minZoom)); // Min 10% or 0.1, whichever is larger
+    }
+  }, [baseScale]);
+
   // Keyboard navigation for accessibility
   useEffect(() => {
     const container = containerRef.current;
@@ -169,7 +192,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const panStep = 50;
-      const zoomStep = 0.1;
 
       switch (e.key) {
         case 'ArrowUp':
@@ -210,7 +232,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     return () => {
       container.removeEventListener('keydown', handleKeyDown);
     };
-  }, [baseScale, scale, position]);
+  }, [zoomIn, zoomOut, resetView]);
 
   // Handle mouse drag
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -237,28 +259,6 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   
   const handleMouseEnter = () => {
     setIsHovering(true);
-  };
-
-  // Reset view to fitted (100%)
-  const resetView = () => {
-    setScale(baseScale);
-    setPosition(initialPosition);
-  };
-
-  // Zoom in/out buttons (relative to baseScale)
-  const zoomIn = () => {
-    if (baseScale > 0) {
-      const safeBaseScale = baseScale > 0 ? baseScale : 1;
-      setScale(Math.min(scale + safeBaseScale * 0.1, safeBaseScale * 3)); // Max 300%
-    }
-  };
-  
-  const zoomOut = () => {
-    if (baseScale > 0) {
-      const safeBaseScale = baseScale > 0 ? baseScale : 1;
-      const minZoom = Math.max(0.1, safeBaseScale * 0.1); // Ensure reasonable minimum
-      setScale(Math.max(scale - safeBaseScale * 0.1, minZoom)); // Min 10% or 0.1, whichever is larger
-    }
   };
 
   // Handle zoom input
