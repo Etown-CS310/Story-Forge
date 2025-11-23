@@ -157,6 +157,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       return;
     }
 
+    setError('');
     setLoading(true);
     clearResults();
 
