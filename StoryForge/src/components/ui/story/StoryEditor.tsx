@@ -196,16 +196,19 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
                   setNewSceneTitle(title || '');
-                  // Scroll to the Add Scene section
-                  requestAnimationFrame(() => {
+                  // Scroll to the Add Scene section, retrying if necessary
+                  const scrollToAddSceneSection = (attempt = 0) => {
                     const el = addSceneSectionRef.current;
                     if (el) {
                       el.scrollIntoView({
                         behavior: 'smooth',
                         block: 'start',
                       });
+                    } else if (attempt < 5) {
+                      setTimeout(() => scrollToAddSceneSection(attempt + 1), 50);
                     }
-                  });
+                  };
+                  scrollToAddSceneSection();
                 }}
               />
               <div className="flex gap-3 items-center">
