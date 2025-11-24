@@ -122,4 +122,39 @@ export default defineSchema({
   })
     .index('by_story', ['storyId'])
     .index('by_proposer', ['proposedBy']),
+
+  // Saved AI suggestions and generated content
+  savedSuggestions: defineTable({
+    userId: v.id('users'),
+    storyId: v.optional(v.id('stories')),
+    nodeId: v.optional(v.id('nodes')),
+    type: v.string(), // "improvement", "choice", "rewrite", etc.
+    
+    // For improvement suggestions
+    suggestions: v.optional(v.string()),
+    exampleEdits: v.optional(v.object({
+      sceneTitle: v.string(),
+      revisedText: v.string(),
+      analysis: v.string(),
+    })),
+    
+    // For generated choices
+    choices: v.optional(v.array(v.object({
+      label: v.string(),
+      description: v.string(),
+      title: v.optional(v.string()),
+    }))),
+    
+    // For rewrites/enhancements
+    content: v.optional(v.string()),
+    
+    // Context
+    originalContent: v.string(),
+    
+    // Optional note
+    note: v.optional(v.string()),
+  })
+    .index('by_user', ['userId'])
+    .index('by_story', ['storyId'])
+    .index('by_node', ['nodeId']),
 });
