@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network, Maximize2, Minimize2 } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp } from 'lucide-react';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
@@ -24,12 +24,26 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [nodeContent, setNodeContent] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
+  const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
+  
+  // Ref for scrolling to the Add Scene section
+  const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
 
+  // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
+  const aiAssistantKey = selectedNodeId ?? 'no-node';
+
+  // Reset to root node and graph view when story changes
   React.useEffect(() => {
     if (!graph) return;
-    if (!selectedNodeId && graph.rootNodeId) setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
+    setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
+    setViewMode('graph');
+  }, [storyId, graph]);
+
+  // Update content when selected node changes
+  React.useEffect(() => {
+    if (!graph) return;
     const sel = graph.nodes.find((n: any) => n._id === selectedNodeId);
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
@@ -110,12 +124,12 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 >
                   {isFullHeight ? (
                     <>
-                      <Minimize2 className="w-3 h-3" />
-                      Normal
+                      <ChevronsUp className="w-3 h-3" />
+                      Minimize
                     </>
                   ) : (
                     <>
-                      <Maximize2 className="w-3 h-3" />
+                      <ChevronsDown className="w-3 h-3" />
                       Expand
                     </>
                   )}
@@ -177,12 +191,30 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
               />
+              {/* Add key prop to force remount when selectedNodeId changes */}
               <AIAssistant
+                key={aiAssistantKey}
                 content={nodeContent}
-                onApplySuggestion={(newContent) => setNodeContent(newContent)}
-                onGenerateChoice={(label, description) => {
+                onApplySuggestion={(newContent, newTitle) => {
+                  setNodeContent(newContent);
+                  if (newTitle) {
+                    setNodeTitle(newTitle);
+                  }
+                }}
+                onGenerateChoice={(label, description, title) => {
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
+                  setNewSceneTitle(title || '');
+                  // Scroll to the Add Scene section
+                  requestAnimationFrame(() => {
+                    const el = addSceneSectionRef.current;
+                    if (el) {
+                      el.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      });
+                    }
+                  });
                 }}
               />
               <div className="flex gap-3 items-center">
@@ -247,17 +279,23 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 </div>
 
                 {/* Create new node + edge */}
-                <div className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
+                <div ref={addSceneSectionRef} className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Plus className="w-4 h-4" />
-                    Add Scene
+                    Add New Scene
                   </div>
                   <Input
-                    placeholder="Path Label"
+                    placeholder="Path Label (e.g., 'Enter the forest', 'Stay silent')"
                     value={newChoiceLabel}
                     onChange={(e) => setNewChoiceLabel(e.target.value)}
                   />
+                  <Input
+                    placeholder="Scene Title (e.g., 'The Dark Forest', 'A Moment of Silence')"
+                    value={newSceneTitle}
+                    onChange={(e) => setNewSceneTitle(e.target.value)}
+                  />
                   <Textarea
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     rows={4}
                     placeholder="New scene content…"
                     value={newNodeContent}
@@ -270,9 +308,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         if (!selectedNodeId) return;
                         const label = newChoiceLabel.trim();
                         const content = newNodeContent.trim();
+                        const title = newSceneTitle.trim() || 'Untitled Scene';
                         if (!label || !content) return;
-                        await createNodeAndEdge({ storyId, fromNodeId: selectedNodeId, label, content });
+                        await createNodeAndEdge({ storyId, fromNodeId: selectedNodeId, label, content, title });
                         setNewChoiceLabel('');
+                        setNewSceneTitle('');
                         setNewNodeContent('');
                       })();
                     }}
@@ -316,7 +356,7 @@ function ExistingEdgeCreator({
 
   return (
     <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
-      <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+      <div className="text-sm font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-2">
         <Link className="w-3.5 h-3.5" />
         Or link to an existing scene:
       </div>

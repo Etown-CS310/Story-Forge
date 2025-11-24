@@ -3,8 +3,8 @@ import { query } from '../_generated/server';
 import { v } from 'convex/values';
 
 export const getStoryMermaid = query({
-  args: { storyId: v.id('stories') },
-  handler: async (ctx, { storyId }) => {
+  args: { storyId: v.id('stories'), isDarkMode: v.optional(v.boolean()) },
+  handler: async (ctx, { storyId, isDarkMode }) => {
     const story = await ctx.db.get(storyId);
     if (!story) throw new Error('Story not found');
     
@@ -22,13 +22,20 @@ export const getStoryMermaid = query({
     
     for (const node of nodes) {
       const nodeId = sanitizeId(node._id);
-      const truncatedContent = truncate(node.content, 40);
+
+      // Escape text for Mermaid
+      const rawDisplayText = node.title
+        ? truncate(node.title, 40)
+        : truncate(node.content, 40);
+
+      const displayText = escapeMermaidText(rawDisplayText);
+
       const isRoot = story.rootNodeId === node._id;
       
       if (isRoot) {
-        mermaid += `  ${nodeId}[["🏁 ${truncatedContent}"]]\n`;
+        mermaid += `  ${nodeId}[["🏁 ${displayText}"]]\n`;
       } else {
-        mermaid += `  ${nodeId}["${truncatedContent}"]\n`;
+        mermaid += `  ${nodeId}["${displayText}"]\n`;
       }
     }
     
@@ -37,7 +44,9 @@ export const getStoryMermaid = query({
     for (const edge of edges) {
       const fromId = sanitizeId(edge.fromNodeId);
       const toId = sanitizeId(edge.toNodeId);
-      const label = truncate(edge.label, 30);
+
+      const rawLabel = truncate(edge.label, 30);
+      const label = escapeMermaidText(rawLabel);
       
       let suffix = '';
       if (edge.conditions) suffix += ' 🔒';
@@ -47,7 +56,11 @@ export const getStoryMermaid = query({
     }
     
     if (story.rootNodeId) {
-      mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#90EE90,stroke:#2E8B57,stroke-width:3px\n`;
+      if (isDarkMode) {
+        mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#15803d,stroke:#22c55e,stroke-width:3px,color:#dcfce7\n`;
+      } else {
+        mermaid += `\n  style ${sanitizeId(story.rootNodeId)} fill:#86efac,stroke:#16a34a,stroke-width:3px,color:#052e16\n`;
+      }
     }
     
     return {
@@ -67,4 +80,26 @@ function sanitizeId(id: string): string {
 function truncate(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
   return text.substring(0, maxLen - 3) + '...';
+}
+
+function escapeMermaidText(text: string): string {
+  // Escape special characters for Mermaid text labels.
+  // Important: Escape & first to avoid corrupting existing entities.
+  return text
+    .replace(/&/g, '&amp;')         // Escape ampersand FIRST
+    .replace(/\n/g, ' ')            // Replace newlines with spaces
+    .replace(/\r/g, '')             // Remove carriage returns
+    .replace(/`/g, '&#96;')         // Escape backticks
+    .replace(/'/g, '&#39;')         // Escape single quotes
+    .replace(/#/g, '&#35;')         // Escape #
+    .replace(/"/g, '&#34;')         // Escape double quotes
+    .replace(/\[/g, '&#91;')        // Escape [
+    .replace(/\]/g, '&#93;')        // Escape ]
+    .replace(/{/g, '&#123;')        // Escape {
+    .replace(/}/g, '&#125;')        // Escape }
+    .replace(/\(/g, '&#40;')        // Escape (
+    .replace(/\)/g, '&#41;')        // Escape )
+    .replace(/\|/g, '&#124;')       // Escape |
+    .replace(/</g, '&#60;')          // Escape <
+    .replace(/>/g, '&#62;');         // Escape >
 }

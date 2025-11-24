@@ -15,7 +15,7 @@ function getApiKey() {
 export const suggestImprovements = action({
   args: {
     content: v.string(),
-    selectedAspects: v.optional(v.string()), // ✅ optional argument
+    selectedAspects: v.optional(v.string()),
   },
   handler: async (_, { content, selectedAspects }) => {
     const apiKey = getApiKey();
@@ -39,11 +39,10 @@ export const suggestImprovements = action({
       ? selectedAspects
       : randomAspects.sort(() => Math.random() - 0.5).slice(0, 3).join(', ');
 
-    // ✅ Fix: Assign template strings to variables first
     const systemPrompt = `You are a creative writing assistant. Provide exactly 3 specific, actionable suggestions to improve narrative text. Focus your analysis on these aspects: ${aspects}. Each suggestion should be concrete and distinct.`;
     const userPrompt = `Analyze this story text and provide exactly 3 distinct improvement suggestions:\n\n${content}`;
 
-    // 🔥 Send content and selected aspects to OpenAI
+    // Send content and selected aspects to OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -67,8 +66,15 @@ export const suggestImprovements = action({
     const data = await response.json();
     const suggestionsText = data.choices?.[0]?.message?.content ?? '';
 
-    // Generate example rewritten text
-    const examplePrompt = `Using the same aspects (${aspects}), rewrite a short example of the input text (2–3 sentences) that demonstrates improvement.`;
+    // Generate example rewritten text with structured JSON output
+    const examplePrompt = `Using the same aspects (${aspects}), rewrite a short example of the input text (2–3 sentences) that demonstrates improvement. Also suggest a compelling scene title.
+
+Return your response as a JSON object with this exact structure:
+{
+  "sceneTitle": "Your suggested scene title",
+  "revisedText": "Your revised text (2-3 sentences)",
+  "analysis": "Brief explanation of the improvements made"
+}`;
     const exampleUserPrompt = `Original text:\n\n${content}`;
 
     const exampleResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -84,6 +90,7 @@ export const suggestImprovements = action({
           { role: 'user', content: exampleUserPrompt },
         ],
         temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -92,12 +99,25 @@ export const suggestImprovements = action({
       throw new Error(`OpenAI API (example) request failed: ${exampleResponse.status} ${exampleResponse.statusText} - ${errorText}`);
     }
     const exampleData = await exampleResponse.json();
-    const exampleEdits = exampleData.choices?.[0]?.message?.content ?? '';
+    const exampleContent = exampleData.choices?.[0]?.message?.content ?? '{}';
+    
+    let parsedExample;
+
+    try {
+      parsedExample = JSON.parse(exampleContent);
+    } catch (err) {
+      console.error('Failed to parse example JSON:', err);
+      throw new Error('Failed to parse example JSON: ' + err);
+    }
 
     return {
       aspects,
       suggestions: suggestionsText,
-      exampleEdits,
+      exampleEdits: {
+        sceneTitle: parsedExample.sceneTitle || '',
+        revisedText: parsedExample.revisedText || '',
+        analysis: parsedExample.analysis || '',
+      },
     };
   },
 });
@@ -106,13 +126,22 @@ export const rewriteContent = action({
   args: {
     content: v.string(),
     tone: v.optional(v.string()),
+    feedback: v.optional(v.string()),
   },
-  handler: async (_, { content, tone }) => {
+  handler: async (_, { content, tone, feedback }) => {
     const apiKey = getApiKey();
 
-    const systemContent = tone
-      ? `You are a creative writing assistant. Rewrite the text in a ${tone} tone while preserving the core meaning and story beats.`
-      : 'You are a creative writing assistant. Rewrite the text in an engaging way while preserving the core meaning and story beats.';
+    // Build system prompt based on what's provided
+    let systemContent: string;
+    
+    if (feedback) {
+      // Feedback takes priority - it's more specific
+      systemContent = `You are a creative writing assistant. Revise the text by addressing this specific feedback: "${feedback}". Maintain the core story while incorporating the requested changes.`;
+    } else if (tone) {
+      systemContent = `You are a creative writing assistant. Rewrite the text in a ${tone} tone while preserving the core meaning and story beats.`;
+    } else {
+      systemContent = 'You are a creative writing assistant. Rewrite the text in an engaging way while preserving the core meaning and story beats.';
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -153,9 +182,36 @@ export const rewriteContent = action({
 export const enhanceContent = action({
   args: {
     content: v.string(),
+    targetLength: v.optional(v.string()),
   },
-  handler: async (_, { content }) => {
+  handler: async (_, { content, targetLength }) => {
     const apiKey = getApiKey();
+
+    // Parse the target length (e.g., "2-3", "1-2", "3-5 paragraphs")
+    // Check if "paragraph" is already in the input to avoid duplication
+    const getLengthInstruction = (targetLength: string): string => {
+      if (/\bparagraphs?\b/i.test(targetLength)) {
+        return `Expand to approximately ${targetLength}`;
+      }
+      
+      const singleMatch = targetLength.match(/^\s*(\d+)\s*$/);
+      if (singleMatch) {
+        const num = parseInt(singleMatch[1], 10);
+        const word = num === 1 ? 'paragraph' : 'paragraphs';
+        return `Expand to approximately ${targetLength} ${word}`;
+      }
+      
+      const rangeMatch = targetLength.match(/^\s*\d+\s*-\s*\d+\s*$/);
+      if (rangeMatch) {
+        return `Expand to approximately ${targetLength} paragraphs`;
+      }
+      
+      return `Expand to approximately ${targetLength} paragraphs`;
+    };
+
+    const lengthInstruction = targetLength 
+      ? getLengthInstruction(targetLength)
+      : 'Expand by approximately 50-100%';
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -169,11 +225,11 @@ export const enhanceContent = action({
           {
             role: 'system',
             content:
-              'You are a creative writing assistant. Expand and enhance the given text by adding more detail, depth, and narrative richness while maintaining the original tone and direction.',
+              `You are a creative writing assistant. ${lengthInstruction}. Expand and enhance the given text by adding more detail, depth, and narrative richness while maintaining the original tone and direction.`,
           },
           {
             role: 'user',
-            content: `Enhance and expand this text by adding more detail and depth:\n\n${content}`,
+            content: `Enhance and expand this text:\n\n${content}`,
           },
         ],
         temperature: 0.8,
@@ -226,11 +282,11 @@ export const generateChoices = action({
           },
           {
             role: 'user',
-            content: `Given this story text, suggest ${numChoices} interesting choices/branches the reader could make. Return as a JSON object with a "choices" key containing an array of objects, where each object has "label" and "description" fields.\n\nExample format: {"choices": [{"label": "...", "description": "..."}]}\n\n${content}`,
+            content: `Given this story text, suggest ${numChoices} interesting choices/branches the reader could make. Return as a JSON object with a "choices" key containing an array of objects, where each object has "label" (the choice text shown to the reader), "title" (a scene title for where this choice leads), and "description" (the opening content for that scene).\n\nExample format: {"choices": [{"label": "Enter the dark forest", "title": "Into the Shadows", "description": "The trees loom overhead as you step into darkness..."}]}\n\n${content}`,
           },
         ],
         temperature: 0.9,
-        max_tokens: 800,
+        max_tokens: 1000,
         response_format: { type: 'json_object' },
       }),
     });
