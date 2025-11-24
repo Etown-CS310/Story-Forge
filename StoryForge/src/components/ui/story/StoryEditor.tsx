@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp} from 'lucide-react';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
@@ -28,6 +28,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
+  const [savedSuggestionsOpen, setSavedSuggestionsOpen] = React.useState(false);
   
   // Ref for scrolling to the Add Scene section
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
@@ -225,20 +226,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     }
                   });
                 }}
-              />
-
-              <SavedSuggestionsViewer
-                storyId={storyId}
-                nodeId={selectedNodeId ?? undefined}
-                onApplySuggestion={(content, title) => {
-                  setNodeContent(content);
-                  if (title) setNodeTitle(title);
-                }}
-                onApplyChoice={(label, desc, title) => {
-                  setNewChoiceLabel(label);
-                  setNewNodeContent(desc);
-                  setNewSceneTitle(title || '');
-                }}
+                onOpenSavedViewer={() => setSavedSuggestionsOpen(true)}
               />
               
               <div className="flex gap-3 items-center">
@@ -363,6 +351,24 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
           </div>
         )}
       </CardContent>
+
+      <SavedSuggestionsViewer
+        storyId={storyId}
+        nodeId={selectedNodeId ?? undefined}
+        open={savedSuggestionsOpen}
+        onOpenChange={setSavedSuggestionsOpen}
+        onApplySuggestion={(content, title) => {
+          setNodeContent(content);
+          if (title) setNodeTitle(title);
+          setSavedSuggestionsOpen(false);
+        }}
+        onApplyChoice={(label, desc, title) => {
+          setNewChoiceLabel(label);
+          setNewNodeContent(desc);
+          setNewSceneTitle(title || '');
+          setSavedSuggestionsOpen(false);
+        }}
+      />
     </Card>
   );
 }

@@ -4,7 +4,7 @@ import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp, PenLine, Plus, MessageSquare, Save, Check } from 'lucide-react';
+import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp, PenLine, Plus, MessageSquare, Save, Check, Book } from 'lucide-react';
 import { Id } from '@/../convex/_generated/dataModel';
 
 interface AIAssistantProps {
@@ -13,6 +13,7 @@ interface AIAssistantProps {
   onGenerateChoice: (label: string, description: string, title?: string) => void;
   storyId?: Id<'stories'>;
   nodeId?: Id<'nodes'>;
+  onOpenSavedViewer?: () => void;
 }
 
 interface ExampleEdits {
@@ -21,7 +22,7 @@ interface ExampleEdits {
   analysis: string;
 }
 
-export default function AIAssistant({ content, onApplySuggestion, onGenerateChoice, storyId, nodeId }: AIAssistantProps) {
+export default function AIAssistant({ content, onApplySuggestion, onGenerateChoice, storyId, nodeId, onOpenSavedViewer }: AIAssistantProps) {
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<string>('');
   const [lastResultType, setLastResultType] = React.useState<'rewrite' | 'enhance'>('rewrite');
@@ -339,24 +340,39 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
             <Sparkles className="w-5 h-5" />
             AI Assistant
           </div>
-          <Button
-            onClick={() => setCollapsed(!collapsed)}
-            variant="ghost"
-            size="sm"
-            className="h-8 px-3"
-          >
-            {collapsed ? (
-              <div className="flex items-center gap-1.5">
-                <ChevronDown className="w-4 h-4" />
-                <span className="text-sm text-muted-foreground">Expand</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <ChevronUp className="w-4 h-4" />
-                <span className="text-sm text-muted-foreground">Collapse</span>
-              </div>
+          <div className="flex items-center gap-2">
+            {onOpenSavedViewer && (
+              <Button
+                onClick={onOpenSavedViewer}
+                variant="outline"
+                size="sm"
+                className="h-8 px-3 border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Book className="w-4 h-4 text-purple-700 dark:text-purple-300" />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">My Saved</span>
+                </div>
+              </Button>
             )}
-          </Button>
+            <Button
+              onClick={() => setCollapsed(!collapsed)}
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
+            >
+              {collapsed ? (
+                <div className="flex items-center gap-1.5">
+                  <ChevronDown className="w-4 h-4 text-purple-700 dark:text-purple-300" />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Expand</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <ChevronUp className="w-4 h-4 text-purple-700 dark:text-purple-300" />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Collapse</span>
+                </div>
+              )}
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
 
