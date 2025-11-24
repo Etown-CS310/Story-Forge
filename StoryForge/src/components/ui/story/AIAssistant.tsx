@@ -1,15 +1,18 @@
 import React from 'react';
-import { useAction } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp, PenLine, Plus, MessageSquare } from 'lucide-react';
+import { Sparkles, Wand2, Lightbulb, AlertCircle, Loader2, ChevronDown, ChevronUp, PenLine, Plus, MessageSquare, Save, Check } from 'lucide-react';
+import { Id } from '@/../convex/_generated/dataModel';
 
 interface AIAssistantProps {
   content: string;
   onApplySuggestion: (newContent: string, newTitle?: string) => void;
   onGenerateChoice: (label: string, description: string, title?: string) => void;
+  storyId?: Id<'stories'>;
+  nodeId?: Id<'nodes'>;
 }
 
 interface ExampleEdits {
@@ -18,9 +21,10 @@ interface ExampleEdits {
   analysis: string;
 }
 
-export default function AIAssistant({ content, onApplySuggestion, onGenerateChoice }: AIAssistantProps) {
+export default function AIAssistant({ content, onApplySuggestion, onGenerateChoice, storyId, nodeId }: AIAssistantProps) {
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<string>('');
+  const [lastResultType, setLastResultType] = React.useState<'rewrite' | 'enhance'>('rewrite');
   const [suggestions, setSuggestions] = React.useState<string>('');
   const [exampleEdits, setExampleEdits] = React.useState<ExampleEdits | null>(null);
   const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string; title?: string }>>([]);
@@ -32,11 +36,16 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [feedbackResult, setFeedbackResult] = React.useState('');
   const [collapsed, setCollapsed] = React.useState(false);
   const [apiKeyMissing, setApiKeyMissing] = React.useState(false);
+  const [savedSuggestion, setSavedSuggestion] = React.useState(false);
+  const [savedChoices, setSavedChoices] = React.useState(false);
+  const [savedRewrite, setSavedRewrite] = React.useState(false);
+  const [savedFeedback, setSavedFeedback] = React.useState(false);
 
   const suggestImprovements = useAction(api.ai.suggestImprovements);
   const rewriteContent = useAction(api.ai.rewriteContent);
   const enhanceContent = useAction(api.ai.enhanceContent);
   const generateChoices = useAction(api.ai.generateChoices);
+  const saveSuggestion = useMutation(api.suggestions.saveSuggestion);
 
   // Moved after all state declarations for better organization
   const clearResults = () => {
@@ -46,6 +55,10 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     setExampleEdits(null);
     setGeneratedChoices([]);
     setFeedbackResult('');
+    setSavedSuggestion(false);
+    setSavedChoices(false);
+    setSavedRewrite(false);
+    setSavedFeedback(false);
   };
 
   const validateExpandLength = (value: string): boolean => {
@@ -96,6 +109,79 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     }
   };
 
+  const handleSaveSuggestion = async () => {
+    if (!suggestions || !exampleEdits) return;
+    
+    try {
+      await saveSuggestion({
+        storyId,
+        nodeId,
+        type: 'improvement',
+        originalContent: content,
+        suggestions,
+        exampleEdits,
+      });
+      setSavedSuggestion(true);
+      setTimeout(() => setSavedSuggestion(false), 2000);
+    } catch (err: any) {
+      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleSaveChoices = async () => {
+    if (generatedChoices.length === 0) return;
+    
+    try {
+      await saveSuggestion({
+        storyId,
+        nodeId,
+        type: 'choices',
+        originalContent: content,
+        choices: generatedChoices,
+      });
+      setSavedChoices(true);
+      setTimeout(() => setSavedChoices(false), 2000);
+    } catch (err: any) {
+      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleSaveRewrite = async () => {
+    if (!result) return;
+    
+    try {
+      await saveSuggestion({
+        storyId,
+        nodeId,
+        type: lastResultType,
+        originalContent: content,
+        content: result,
+      });
+      setSavedRewrite(true);
+      setTimeout(() => setSavedRewrite(false), 2000);
+    } catch (err: any) {
+      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleSaveFeedback = async () => {
+    if (!feedbackResult) return;
+    
+    try {
+      await saveSuggestion({
+        storyId,
+        nodeId,
+        type: 'rewrite',
+        originalContent: content,
+        content: feedbackResult,
+      });
+      setSavedFeedback(true);
+      setTimeout(() => setSavedFeedback(false), 2000);
+    } catch (err: any) {
+      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+    }
+  };
+
   const handleRewrite = async () => {
     if (!content.trim()) {
       setError('No content to rewrite');
@@ -108,6 +194,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     try {
       const rewritten = await rewriteContent({ content });
       setResult(rewritten);
+      setLastResultType('rewrite');
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
         setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
@@ -136,6 +223,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     try {
       const rewritten = await rewriteContent({ content, tone: customTone });
       setResult(rewritten);
+      setLastResultType('rewrite');
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
         setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
@@ -164,6 +252,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
     try {
       const enhanced = await enhanceContent({ content, targetLength: expandLength.trim() });
       setResult(enhanced);
+      setLastResultType('enhance');
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
         setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
@@ -434,13 +523,25 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                   <div className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
                     {exampleEdits.revisedText}
                   </div>
-                  <Button 
-                    onClick={() => onApplySuggestion(exampleEdits.revisedText, exampleEdits.sceneTitle || undefined)} 
-                    size="sm" 
-                    className="w-full mt-3"
-                  >
-                    Apply Revised Text to Editor
-                  </Button>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      onClick={() => onApplySuggestion(exampleEdits.revisedText, exampleEdits.sceneTitle || undefined)} 
+                      size="sm" 
+                      className="flex-1"
+                    >
+                      Apply Revised Text to Editor
+                    </Button>
+                    <Button
+                      onClick={() => { void handleSaveSuggestion(); }}
+                      size="sm"
+                      variant={savedSuggestion ? "outline" : "blue"}
+                      className="gap-2"
+                      disabled={savedSuggestion}
+                    >
+                      {savedSuggestion ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                      {savedSuggestion ? 'Saved' : 'Save'}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -463,9 +564,25 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                 {result}
               </div>
-              <Button onClick={() => onApplySuggestion(result)} size="sm" className="w-full">
-                Apply to Editor
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => onApplySuggestion(result)} 
+                  size="sm" 
+                  className="flex-1"
+                >
+                  Apply to Editor
+                </Button>
+                <Button
+                  onClick={() => { void handleSaveRewrite(); }}
+                  size="sm"
+                  variant={savedRewrite ? "outline" : "blue"}
+                  className="gap-2"
+                  disabled={savedRewrite}
+                >
+                  {savedRewrite ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {savedRewrite ? 'Saved' : 'Save'}
+                </Button>
+              </div>
             </div>
           )}
 
@@ -478,14 +595,43 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               <div className="text-sm text-purple-900 dark:text-purple-100 whitespace-pre-wrap">
                 {feedbackResult}
               </div>
-              <Button onClick={() => onApplySuggestion(feedbackResult)} size="sm" className="w-full mt-3">
-                Apply to Editor
-              </Button>
+              <div className="flex gap-2 mt-3">
+                <Button 
+                  onClick={() => onApplySuggestion(feedbackResult)} 
+                  size="sm" 
+                  className="flex-1"
+                >
+                  Apply to Editor
+                </Button>
+                <Button
+                  onClick={() => { void handleSaveFeedback(); }}
+                  size="sm"
+                  variant={savedFeedback ? "outline" : "blue"}
+                  className="gap-2"
+                  disabled={savedFeedback}
+                >
+                  {savedFeedback ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {savedFeedback ? 'Saved' : 'Save'}
+                </Button>
+              </div>
             </div>
           )}
 
           {generatedChoices.length > 0 && (
             <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Generated Choices</h4>
+                  <Button
+                    onClick={() => { void handleSaveChoices(); }}
+                    size="sm"
+                    variant={savedChoices ? "outline" : "blue"}
+                    className="gap-2"
+                    disabled={savedChoices}
+                  >
+                  {savedChoices ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                  {savedChoices ? 'Saved' : 'Save All'}
+                </Button>
+              </div>
               {generatedChoices.map((choice, idx) => (
                 <div key={idx} className="p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border border-indigo-200 dark:border-indigo-800">
                   <div className="flex items-start justify-between gap-3 mb-2">

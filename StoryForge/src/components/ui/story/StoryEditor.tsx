@@ -10,6 +10,7 @@ import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp } 
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
+import SavedSuggestionsViewer from './SavedSuggestionsViewer';
 
 export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories'>; onClose: () => void }) {
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
@@ -34,12 +35,18 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
   const aiAssistantKey = selectedNodeId ?? 'no-node';
 
-  // Reset to root node and graph view when story changes
+  // Reset to graph view when story changes (don't reset when graph data updates)
+  React.useEffect(() => {
+    setViewMode('graph');
+  }, [storyId]);
+
+  // Initialize selectedNodeId to root node when graph loads
   React.useEffect(() => {
     if (!graph) return;
-    setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
-    setViewMode('graph');
-  }, [storyId, graph]);
+    if (!selectedNodeId) {
+      setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
+    }
+  }, [graph, selectedNodeId]);
 
   // Update content when selected node changes
   React.useEffect(() => {
@@ -191,10 +198,13 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
               />
+
               {/* Add key prop to force remount when selectedNodeId changes */}
               <AIAssistant
                 key={aiAssistantKey}
                 content={nodeContent}
+                storyId={storyId}
+                nodeId={selectedNodeId ?? undefined}
                 onApplySuggestion={(newContent, newTitle) => {
                   setNodeContent(newContent);
                   if (newTitle) {
@@ -205,7 +215,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
                   setNewSceneTitle(title || '');
-                  // Scroll to the Add Scene section
                   requestAnimationFrame(() => {
                     const el = addSceneSectionRef.current;
                     if (el) {
@@ -217,6 +226,21 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   });
                 }}
               />
+
+              <SavedSuggestionsViewer
+                storyId={storyId}
+                nodeId={selectedNodeId ?? undefined}
+                onApplySuggestion={(content, title) => {
+                  setNodeContent(content);
+                  if (title) setNodeTitle(title);
+                }}
+                onApplyChoice={(label, desc, title) => {
+                  setNewChoiceLabel(label);
+                  setNewNodeContent(desc);
+                  setNewSceneTitle(title || '');
+                }}
+              />
+              
               <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {
@@ -247,7 +271,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     return (
                       <div
                         key={e._id}
-                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all"
                       >
                         <div className="flex-1 min-w-0 pr-3">
                           <div className="font-medium text-sm text-slate-800 dark:text-white">{e.label}</div>
@@ -259,11 +283,13 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                           variant="destructive"
                           size="sm"
                           onClick={() => {
-                            void (async () => {
-                              await deleteEdge({ edgeId: e._id });
-                            })();
+                            if (confirm('Are you sure you want to delete this choice?')) {
+                              void (async () => {
+                                await deleteEdge({ edgeId: e._id });
+                              })();
+                            }
                           }}
-                          className="flex-shrink-0 gap-2"
+                          className="flex-shrink-0 gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
