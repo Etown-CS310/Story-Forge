@@ -2,11 +2,10 @@ import React from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Id } from '@/../convex/_generated/dataModel';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lightbulb, Sparkles, Trash2, Copy, FileText, PenLine, Plus } from 'lucide-react';
+import { Lightbulb, Sparkles, Trash2, Copy, FileText, PenLine, Plus, Book } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +19,8 @@ interface SavedSuggestionsViewerProps {
   onApplyChoice?: (label: string, description: string, title?: string) => void;
   storyId?: Id<'stories'>;
   nodeId?: Id<'nodes'>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export default function SavedSuggestionsViewer({
@@ -27,6 +28,8 @@ export default function SavedSuggestionsViewer({
   onApplyChoice,
   storyId,
   nodeId,
+  open,
+  onOpenChange,
 }: SavedSuggestionsViewerProps) {
   const [filterType, setFilterType] = React.useState<string>('all');
   const [selectedId, setSelectedId] = React.useState<Id<'savedSuggestions'> | null>(null);
@@ -45,6 +48,13 @@ export default function SavedSuggestionsViewer({
 
   const deleteSuggestion = useMutation(api.suggestions.deleteSuggestion);
   const updateNote = useMutation(api.suggestions.updateSuggestionNote);
+
+  // Reset filter when modal closes
+  React.useEffect(() => {
+    if (!open) {
+      setFilterType('all');
+    }
+  }, [open]);
 
   React.useEffect(() => {
     if (selectedSuggestion && selectedSuggestion.note) {
@@ -76,44 +86,45 @@ export default function SavedSuggestionsViewer({
 
   if (!suggestions) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Saved Suggestions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Book className="w-5 h-5 text-blue-600" />
+              Saved Suggestions
+            </DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent" />
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
     <>
-      <Card>
-        <CardHeader className="border-b border-slate-100 dark:border-slate-700">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            Saved Suggestions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {/* Filter buttons */}
-          <div className="flex gap-2 mb-4 flex-wrap">
-            {['all', 'improvement', 'choices', 'rewrite', 'enhance'].map((type) => (
-              <Button
-                key={type}
-                size="sm"
-                variant={filterType === type ? 'default' : 'outline'}
-                onClick={() => setFilterType(type)}
-                className="capitalize"
-              >
-                {type}
-              </Button>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader className="border-b border-slate-100 dark:border-slate-700 pb-4">
+            <DialogTitle className="flex items-center gap-2">
+              <Book className="w-5 h-5 text-blue-600" />
+              Saved Suggestions
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden pt-6 space-y-4">
+            {/* Filter buttons */}
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {['all', 'improvement', 'choices', 'rewrite', 'enhance'].map((type) => (
+                <Button
+                  key={type}
+                  size="sm"
+                  variant={filterType === type ? 'default' : 'outline'}
+                  onClick={() => setFilterType(type)}
+                  className="capitalize"
+                >
+                  {type}
+                </Button>
             ))}
           </div>
 
@@ -155,9 +166,7 @@ export default function SavedSuggestionsViewer({
                         variant="destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          void (async () => {
-                            await handleDelete(item._id);
-                          })();
+                          handleDelete(item._id).catch((err) => console.error('Failed to delete:', err));
                         }}
                         className="gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                       >
@@ -184,18 +193,19 @@ export default function SavedSuggestionsViewer({
               </div>
             </ScrollArea>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
 
-      {/* Detail Dialog */}
-      <Dialog open={!!selectedId} onOpenChange={(open) => !open && setSelectedId(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Saved Suggestion Details
-            </DialogTitle>
-            <DialogDescription>
+    {/* Detail Dialog */}
+    <Dialog open={!!selectedId} onOpenChange={(open) => !open && setSelectedId(null)}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Saved Suggestion Details
+          </DialogTitle>
+          <DialogDescription>
               {selectedSuggestion && new Date(selectedSuggestion._creationTime).toLocaleString()}
             </DialogDescription>
           </DialogHeader>
