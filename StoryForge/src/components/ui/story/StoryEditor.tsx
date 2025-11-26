@@ -63,9 +63,9 @@ function LocalNodeGraph({
           theme: isDarkMode ? 'dark' : 'default',
           flowchart: {
             curve: 'basis',
-            padding: 15,
-            nodeSpacing: 40,
-            rankSpacing: 40,
+            padding: 8,
+            nodeSpacing: 25,
+            rankSpacing: 25,
           }
         });
 
@@ -223,13 +223,16 @@ function LocalNodeGraph({
               const svgRect = svgElement.getBoundingClientRect();
               const containerRect = containerRef.current.getBoundingClientRect();
               
-              // Calculate scale to fit (with some padding)
+              // Calculate scale to fit
+              // Balanced sizing to maximize zoom while ensuring no cutoff
               let fitScale = 1;
               if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
-                const scaleX = (containerRect.width * 0.85) / svgRect.width;
+                const scaleX = (containerRect.width * 0.88) / svgRect.width;
                 const scaleY = (containerRect.height * 0.85) / svgRect.height;
-                fitScale = Math.min(scaleX, scaleY, 2);
-                fitScale = Math.max(fitScale, 0.3);
+                // Use the smaller scale to ensure everything fits
+                fitScale = Math.min(scaleX, scaleY);
+                // But don't go below 0.8x or above 8x
+                fitScale = Math.max(0.8, Math.min(fitScale, 8));
               }
               
               // Center the content
@@ -528,7 +531,7 @@ function LocalNodeGraph({
             : 'border-slate-200 dark:border-slate-700'
         } p-4 relative focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400`}
         style={{ 
-          height: '300px',
+          height: '400px',
           cursor: isDragging ? 'grabbing' : 'grab',
           overflow: 'hidden',
           position: 'relative',
