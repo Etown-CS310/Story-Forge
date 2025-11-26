@@ -602,6 +602,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Reset to graph view when story changes (don't reset when graph data updates)
   React.useEffect(() => {
     setViewMode('graph');
+    setSelectedNodeId(null); // Reset selected node so root will be selected when graph loads
   }, [storyId]);
 
   // Initialize selectedNodeId to root node when graph loads
