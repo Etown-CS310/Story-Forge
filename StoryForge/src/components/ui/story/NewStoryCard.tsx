@@ -64,7 +64,7 @@ export default function NewStoryCard({ onCreated }: { onCreated?: () => void }) 
           onClick={() => {
             void (async () => {
               setSubmitting(true);
-              const story = await createStory({
+              await createStory({
                 title: title.trim(),
                 summary: summary.trim() || undefined,
                 rootContent: rootContent.trim(),

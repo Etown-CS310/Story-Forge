@@ -5,5 +5,5 @@ export { default as StoryEditor } from './StoryEditor';
 export { default as NewStoryCard } from './NewStoryCard';
 export { default as StoryGraphViewer } from './StoryGraphViewer';
 export { default as AIAssistant } from './AIAssistant';
-export { default as StoryDialogTooltip } from './StoryDialogTooltip';
+export { default as StoryDialogTooltip } from './StoryDialogToolTip';
 export { default as StoryDialog } from './StoryDialog';

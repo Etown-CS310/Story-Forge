@@ -23,7 +23,12 @@ export default function SessionTile({ session }: { session: any }) {
       </div>
       {open && (
         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <SessionView sessionId={session._id as Id<'sessions'>} />
+          <SessionView
+            sessionId={session._id as Id<'sessions'>}
+            closeActiveSession={function (): void {
+              throw new Error('Function not implemented.');
+            }}
+          />
         </div>
       )}
     </div>

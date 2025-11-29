@@ -1,34 +1,19 @@
 import { ReactNode, useCallback, useMemo } from 'react';
-import { ConvexProviderWithAuth } from 'convex/react';
+import { ConvexProviderWithAuth, ConvexReactClient } from 'convex/react';
 
-type IConvexReactClient = {
-  setAuth(fetchToken: () => Promise<string | null>): void;
-  clearAuth(): void;
-};
-
-// Modified to match WorkOS's auth hook structure
 type UseAuth = () => {
   isLoading: boolean;
   user: unknown;
   getAccessToken: () => Promise<string | null>;
 };
 
-/**
- * A wrapper React component which provides a {@link ConvexReactClient}
- * authenticated with WorkOS AuthKit.
- *
- * It must be wrapped by a configured `AuthKitProvider`, from
- * `@workos-inc/authkit-react`.
- *
- * @public
- */
 export function ConvexProviderWithAuthKit({
   children,
   client,
   useAuth,
 }: {
   children: ReactNode;
-  client: IConvexReactClient;
+  client: ConvexReactClient;
   useAuth: UseAuth;
 }) {
   const useAuthFromWorkOS = useUseAuthFromAuthKit(useAuth);
@@ -47,22 +32,18 @@ function useUseAuthFromAuthKit(useAuth: UseAuth) {
 
         const fetchAccessToken = useCallback(async () => {
           try {
-            const token = await getAccessToken();
-            return token;
+            return await getAccessToken();
           } catch (error) {
             console.error('Error fetching WorkOS access token:', error);
             return null;
           }
         }, [getAccessToken]);
 
-        return useMemo(
-          () => ({
-            isLoading,
-            isAuthenticated: !!user,
-            fetchAccessToken,
-          }),
-          [isLoading, user, fetchAccessToken],
-        );
+        return {
+          isLoading,
+          isAuthenticated: !!user,
+          fetchAccessToken,
+        };
       },
     [useAuth],
   );
