@@ -30,7 +30,7 @@ export default defineSchema({
 
   nodes: defineTable({
     storyId: v.id('stories'),
-    // node “content” is the canonical message at that step
+    // node "content" is the canonical message at that step
     role: v.string(), // "system" | "narrator" | "character" | "user" | "ai"
     title: v.optional(v.string()), // short title for authors to identify nodes
     content: v.string(), // rich text or markdown string; keep assets in storage table
@@ -92,7 +92,7 @@ export default defineSchema({
     .index('by_session', ['sessionId'])
     .index('by_session_role', ['sessionId', 'role']),
 
-  // Optional: user-proposed branches that aren’t published yet
+  // Optional: user-proposed branches that aren't published yet
   drafts: defineTable({
     storyId: v.id('stories'),
     baseNodeId: v.id('nodes'),
@@ -155,6 +155,6 @@ export default defineSchema({
     note: v.optional(v.string()),
   })
     .index('by_user', ['userId'])
-    .index('by_story', ['storyId'])
-    .index('by_node', ['nodeId']),
+    .index('by_user_story', ['userId', 'storyId'])
+    .index('by_user_node', ['userId', 'nodeId']),
 });
