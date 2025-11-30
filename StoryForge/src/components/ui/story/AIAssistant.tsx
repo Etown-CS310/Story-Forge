@@ -30,6 +30,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const [exampleEdits, setExampleEdits] = React.useState<ExampleEdits | null>(null);
   const [generatedChoices, setGeneratedChoices] = React.useState<Array<{ label: string; description: string; title?: string }>>([]);
   const [error, setError] = React.useState<string>('');
+  const [saveError, setSaveError] = React.useState<string>('');
   const [customTone, setCustomTone] = React.useState('');
   const [expandLength, setExpandLength] = React.useState('2-3 paragraphs');
   const [expandLengthError, setExpandLengthError] = React.useState<string>('');
@@ -48,9 +49,18 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const generateChoices = useAction(api.ai.generateChoices);
   const saveSuggestion = useMutation(api.suggestions.saveSuggestion);
 
+  // Clear save error after 3 seconds
+  React.useEffect(() => {
+    if (saveError) {
+      const timer = setTimeout(() => setSaveError(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveError]);
+
   // Moved after all state declarations for better organization
   const clearResults = () => {
     setError('');
+    setSaveError('');
     setResult('');
     setSuggestions('');
     setExampleEdits(null);
@@ -97,13 +107,16 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         setSuggestions(response.suggestions);
         setExampleEdits(response.exampleEdits);
       } else {
-        setError('AI response missing required fields (suggestions or exampleEdits). Please try again or check your input.');
+        setError('AI response missing required fields. Please try again.');
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
-        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+        setApiKeyMissing(true);
+        setError('AI service is not configured. Please contact support.');
+        console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
-        setError(`Failed to get suggestions: ${err.message || 'Unknown error'}`);
+        setError('Failed to get suggestions. Please try again.');
+        console.error('Suggestion error:', err);
       }
     } finally {
       setLoading(false);
@@ -125,7 +138,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setSavedSuggestion(true);
       setTimeout(() => setSavedSuggestion(false), 2000);
     } catch (err: any) {
-      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+      setSaveError('Failed to save suggestion. Please try again.');
+      console.error('Save error:', err);
     }
   };
 
@@ -143,7 +157,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setSavedChoices(true);
       setTimeout(() => setSavedChoices(false), 2000);
     } catch (err: any) {
-      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+      setSaveError('Failed to save choices. Please try again.');
+      console.error('Save error:', err);
     }
   };
 
@@ -161,7 +176,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setSavedRewrite(true);
       setTimeout(() => setSavedRewrite(false), 2000);
     } catch (err: any) {
-      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+      setSaveError('Failed to save rewrite. Please try again.');
+      console.error('Save error:', err);
     }
   };
 
@@ -179,7 +195,8 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setSavedFeedback(true);
       setTimeout(() => setSavedFeedback(false), 2000);
     } catch (err: any) {
-      setError(`Failed to save: ${err.message || 'Unknown error'}`);
+      setSaveError('Failed to save feedback result. Please try again.');
+      console.error('Save error:', err);
     }
   };
 
@@ -198,9 +215,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setLastResultType('rewrite');
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
-        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+        setApiKeyMissing(true);
+        setError('AI service is not configured. Please contact support.');
+        console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
-        setError(`Failed to rewrite: ${err.message || 'Unknown error'}`);
+        setError('Failed to rewrite content. Please try again.');
+        console.error('Rewrite error:', err);
       }
     } finally {
       setLoading(false);
@@ -227,9 +247,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setLastResultType('rewrite');
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
-        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+        setApiKeyMissing(true);
+        setError('AI service is not configured. Please contact support.');
+        console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
-        setError(`Failed to rewrite: ${err.message || 'Unknown error'}`);
+        setError('Failed to apply tone. Please try again.');
+        console.error('Tone error:', err);
       }
     } finally {
       setLoading(false);
@@ -256,9 +279,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setLastResultType('enhance');
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
-        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+        setApiKeyMissing(true);
+        setError('AI service is not configured. Please contact support.');
+        console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
-        setError(`Failed to enhance: ${err.message || 'Unknown error'}`);
+        setError('Failed to enhance content. Please try again.');
+        console.error('Enhance error:', err);
       }
     } finally {
       setLoading(false);
@@ -280,21 +306,23 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         const validChoices = choices.choices.filter((c: any) => c.label && c.description);
         
         if (validChoices.length === 0) {
-          setError('AI generated choices but none had valid label and description fields');
+          setError('No valid choices generated. Please try again.');
           setLoading(false);
           return;
         }
         
         setGeneratedChoices(validChoices);
-        // Don't set result text when choices are generated - the choices themselves are the result
       } else {
-        setError('AI did not return any choices. Please try again or check your input.');
+        setError('Failed to generate choices. Please try again.');
       }
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
-        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+        setApiKeyMissing(true);
+        setError('AI service is not configured. Please contact support.');
+        console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
-        setError(`Failed to generate choices: ${err.message || 'Unknown error'}`);
+        setError('Failed to generate choices. Please try again.');
+        console.error('Generate choices error:', err);
       }
     } finally {
       setLoading(false);
@@ -323,9 +351,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       setFeedbackResult(feedbackResponse);
     } catch (err: any) {
       if (err.message?.includes('OPENAI_API_KEY')) {
-        setError('OpenAI API key not configured in Convex. Run: npx convex env set OPENAI_API_KEY your-key');
+        setApiKeyMissing(true);
+        setError('AI service is not configured. Please contact support.');
+        console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
-        setError(`Failed to apply feedback: ${err.message || 'Unknown error'}`);
+        setError('Failed to apply feedback. Please try again.');
+        console.error('Feedback error:', err);
       }
     } finally {
       setLoading(false);
@@ -400,6 +431,13 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {saveError && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-sm">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{saveError}</span>
             </div>
           )}
 
@@ -648,8 +686,11 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                   {savedChoices ? 'Saved' : 'Save All'}
                 </Button>
               </div>
-              {generatedChoices.map((choice, idx) => (
-                <div key={idx} className="p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border border-indigo-200 dark:border-indigo-800">
+              {generatedChoices.map((choice) => (
+                <div 
+                  key={`${choice.label}-${choice.title ?? ''}-${choice.description.slice(0, 20)}`}
+                  className="p-4 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border border-indigo-200 dark:border-indigo-800"
+                >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1">
                       <h4 className="font-semibold text-indigo-900 dark:text-indigo-100 mb-1">
