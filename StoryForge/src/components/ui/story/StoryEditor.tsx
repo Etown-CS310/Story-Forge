@@ -7,10 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp, GitBranch } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
 import SavedSuggestionsViewer from './SavedSuggestionsViewer';
+
+// Constants for graph scaling
+const MIN_SCALE_MULTIPLIER = 0.8;
+const MAX_SCALE_MULTIPLIER = 8;
+const CONTAINER_WIDTH_PADDING = 0.88; // 88% of container width
+const CONTAINER_HEIGHT_PADDING = 0.85; // 85% of container height
+const SVG_DIMENSION_TIMEOUT_MS = 500;
 
 // Mini graph component showing current node and immediate children
 function LocalNodeGraph({ 
@@ -43,15 +58,16 @@ function LocalNodeGraph({
 
   React.useEffect(() => {
     if (!currentNodeId) {
-      // console.log('LocalNodeGraph - early return: no currentNodeId');
       setRenderState('error');
       setErrorMsg('Missing node ID');
       return;
     }
 
+    // Track if component is mounted
+    let isMounted = true;
+
     const renderMermaid = async () => {
       try {
-        // console.log('LocalNodeGraph - starting render');
         setRenderState('loading');
         setSvgContent('');
         
@@ -73,27 +89,27 @@ function LocalNodeGraph({
         const currentNode = nodes.find(n => n._id === currentNodeId);
         if (!currentNode) {
           console.error('LocalNodeGraph - current node not found');
-          setRenderState('error');
-          setErrorMsg('Current node not found');
+          if (isMounted) {
+            setRenderState('error');
+            setErrorMsg('Current node not found');
+          }
           return;
         }
 
-        // console.log('LocalNodeGraph - current node:', currentNode.title);
-
         // Find edges from current node
         const outgoingEdges = edges.filter(e => e.fromNodeId === currentNodeId);
-        // console.log('LocalNodeGraph - outgoing edges:', outgoingEdges.length);
 
         if (outgoingEdges.length === 0) {
-          setRenderState('error');
-          setErrorMsg('No outgoing paths to display');
+          if (isMounted) {
+            setRenderState('error');
+            setErrorMsg('No outgoing paths to display');
+          }
           return;
         }
         
         // Find child nodes
         const childNodeIds = outgoingEdges.map(e => e.toNodeId);
         const childNodes = nodes.filter(n => childNodeIds.includes(n._id));
-        // console.log('LocalNodeGraph - child nodes:', childNodes.length);
 
         // Build mermaid diagram
         let diagram = 'graph TD\n';
@@ -160,12 +176,8 @@ function LocalNodeGraph({
           diagram += `\n  style ${currentNodeId_safe} fill:#93c5fd,stroke:#2563eb,stroke-width:3px,color:#1e3a8a\n`;
         }
 
-        // console.log('LocalNodeGraph - diagram generated:', diagram.substring(0, 100) + '...');
-
         const uniqueId = 'mermaid-mini-' + currentNodeId.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
         const { svg } = await mermaid.render(uniqueId, diagram);
-        
-        // console.log('LocalNodeGraph - SVG rendered, length:', svg.length);
         
         // Add inline styles to the SVG
         const styledSvg = svg.replace(
@@ -173,27 +185,28 @@ function LocalNodeGraph({
           '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;"'
         );
         
-        setSvgContent(styledSvg);
-        setRenderState('success');
-        // console.log('LocalNodeGraph - render complete');
+        if (isMounted) {
+          setSvgContent(styledSvg);
+          setRenderState('success');
+        }
         
         // Auto-fit after render - wait for SVG to have proper dimensions
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             // Use void IIFE to handle async code without returning Promise
             void (async () => {
-              if (!containerRef.current || !svgWrapperRef.current) return;
+              if (!isMounted || !containerRef.current || !svgWrapperRef.current) return;
               
               const svgElement = svgWrapperRef.current.querySelector('svg');
               if (!svgElement) return;
               
-              // Wait for the SVG to have non-zero dimensions (max 500ms)
+              // Wait for the SVG to have non-zero dimensions (max timeout)
               const start = performance.now();
               await new Promise<void>(resolve => {
                 let resolved = false;
                 
                 function check() {
-                  if (resolved) return;
+                  if (resolved || !isMounted) return;
                   
                   if (!svgElement || !containerRef.current) {
                     resolved = true;
@@ -207,8 +220,8 @@ function LocalNodeGraph({
                   if (rect.width > 0 && rect.height > 0) {
                     resolved = true;
                     resolve();
-                  } else if (performance.now() - start > 500) {
-                    // Timeout after 500ms
+                  } else if (performance.now() - start > SVG_DIMENSION_TIMEOUT_MS) {
+                    // Timeout
                     resolved = true;
                     resolve();
                   } else {
@@ -219,20 +232,22 @@ function LocalNodeGraph({
                 check();
               });
               
+              // Check if still mounted before setting state
+              if (!isMounted) return;
+              
               // Now calculate the fit
               const svgRect = svgElement.getBoundingClientRect();
               const containerRect = containerRef.current.getBoundingClientRect();
               
-              // Calculate scale to fit
-              // Balanced sizing to maximize zoom while ensuring no cutoff
+              // Calculate scale to fit with padding multipliers
               let fitScale = 1;
               if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
-                const scaleX = (containerRect.width * 0.88) / svgRect.width;
-                const scaleY = (containerRect.height * 0.85) / svgRect.height;
+                const scaleX = (containerRect.width * CONTAINER_WIDTH_PADDING) / svgRect.width;
+                const scaleY = (containerRect.height * CONTAINER_HEIGHT_PADDING) / svgRect.height;
                 // Use the smaller scale to ensure everything fits
                 fitScale = Math.min(scaleX, scaleY);
-                // But don't go below 0.8x or above 8x
-                fitScale = Math.max(0.8, Math.min(fitScale, 8));
+                // Clamp between min and max scale multipliers
+                fitScale = Math.max(MIN_SCALE_MULTIPLIER, Math.min(fitScale, MAX_SCALE_MULTIPLIER));
               }
               
               // Center the content
@@ -241,29 +256,32 @@ function LocalNodeGraph({
               const centerX = (containerRect.width - scaledWidth) / 2;
               const centerY = (containerRect.height - scaledHeight) / 2;
               
-              // console.log('LocalNodeGraph - auto-fit:', { 
-              //   svgRect: { w: svgRect.width, h: svgRect.height },
-              //   containerRect: { w: containerRect.width, h: containerRect.height },
-              //   fitScale,
-              //   position: { x: centerX, y: centerY }
-              // });
-              
-              setBaseScale(fitScale);
-              setScale(fitScale);
-              const centeredPosition = { x: centerX, y: centerY };
-              setPosition(centeredPosition);
-              setInitialPosition(centeredPosition);
+              // Only set state if still mounted
+              if (isMounted) {
+                setBaseScale(fitScale);
+                setScale(fitScale);
+                const centeredPosition = { x: centerX, y: centerY };
+                setPosition(centeredPosition);
+                setInitialPosition(centeredPosition);
+              }
             })();
           });
         });
       } catch (err) {
         console.error('LocalNodeGraph - Error:', err);
-        setRenderState('error');
-        setErrorMsg('Failed to render: ' + (err as Error).message);
+        if (isMounted) {
+          setRenderState('error');
+          setErrorMsg('Failed to render: ' + (err as Error).message);
+        }
       }
     };
 
     void renderMermaid();
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [currentNodeId, nodes, edges, isDarkMode]);
 
   // Wheel zoom handler
@@ -279,7 +297,7 @@ function LocalNodeGraph({
       setScale(prevScale => {
         const safeBaseScale = baseScale > 0 ? baseScale : 1;
         const minZoom = Math.max(0.1, safeBaseScale * 0.1);
-        const maxZoom = safeBaseScale * 3;
+        const maxZoom = safeBaseScale * MAX_SCALE_MULTIPLIER;
         const newScale = Math.min(Math.max(minZoom, prevScale + delta * safeBaseScale), maxZoom);
         return newScale;
       });
@@ -297,7 +315,7 @@ function LocalNodeGraph({
 
   const zoomIn = React.useCallback(() => {
     if (baseScale > 0) {
-      setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * 3));
+      setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * MAX_SCALE_MULTIPLIER));
     }
   }, [baseScale]);
   
@@ -430,6 +448,7 @@ function LocalNodeGraph({
         <div className="flex items-center gap-2">
           <button
             disabled
+            aria-label="Zoom out (disabled while loading)"
             className="px-3 py-1.5 text-sm font-semibold bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded cursor-not-allowed"
           >
             −
@@ -439,12 +458,14 @@ function LocalNodeGraph({
           </div>
           <button
             disabled
+            aria-label="Zoom in (disabled while loading)"
             className="px-3 py-1.5 text-sm font-semibold bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded cursor-not-allowed"
           >
             +
           </button>
           <button
             disabled
+            aria-label="Reset view (disabled while loading)"
             className="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded cursor-not-allowed"
           >
             Reset
@@ -477,6 +498,7 @@ function LocalNodeGraph({
       <div className="flex items-center gap-2">
         <button
           onClick={zoomOut}
+          aria-label="Zoom out"
           className="px-3 py-1.5 text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded transition-colors"
           title="Zoom out"
         >
@@ -492,11 +514,13 @@ function LocalNodeGraph({
             autoFocus
             min="10"
             max="300"
+            aria-label="Enter zoom percentage"
             className="w-[60px] px-2 py-1 text-xs text-center border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         ) : (
           <button
             onClick={handleZoomClick}
+            aria-label={`Current zoom: ${baseScale > 0 ? Math.round((scale / baseScale) * 100) : 100}%. Click to edit.`}
             className="min-w-[60px] px-2 py-1 text-xs text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors border border-slate-300 dark:border-slate-600"
             title="Click to enter zoom level"
           >
@@ -505,6 +529,7 @@ function LocalNodeGraph({
         )}
         <button
           onClick={zoomIn}
+          aria-label="Zoom in"
           className="px-3 py-1.5 text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded transition-colors"
           title="Zoom in"
         >
@@ -512,6 +537,7 @@ function LocalNodeGraph({
         </button>
         <button
           onClick={resetView}
+          aria-label="Reset view to optimal fit"
           className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded transition-colors"
           title="Reset to optimal fit"
         >
@@ -542,6 +568,8 @@ function LocalNodeGraph({
         onMouseLeave={handleMouseLeave}
         onMouseEnter={handleMouseEnter}
         tabIndex={0}
+        role="img"
+        aria-label="Interactive story graph showing current scene and available paths"
       >
         <div 
           style={{
@@ -575,9 +603,15 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
   const [savedSuggestionsOpen, setSavedSuggestionsOpen] = React.useState(false);
-  const [isDarkMode, setIsDarkMode] = React.useState(
-    document.documentElement.classList.contains('dark')
-  );
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
+  const [deleteConfirmEdgeId, setDeleteConfirmEdgeId] = React.useState<Id<'edges'> | null>(null);
+  
+  // Set initial dark mode state on client side
+  React.useEffect(() => {
+    if (typeof document !== 'undefined') {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    }
+  }, []);
   
   // Ref for scrolling to the Add Scene section
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
@@ -620,6 +654,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
   }, [graph, selectedNodeId]);
+
+  const handleDeleteEdge = async (edgeId: Id<'edges'>) => {
+    await deleteEdge({ edgeId });
+    setDeleteConfirmEdgeId(null);
+  };
 
   if (!graph)
     return (
@@ -854,13 +893,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this choice?')) {
-                              void (async () => {
-                                await deleteEdge({ edgeId: e._id });
-                              })();
-                            }
-                          }}
+                          onClick={() => setDeleteConfirmEdgeId(e._id)}
                           className="flex-shrink-0 gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -935,6 +968,36 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
           </div>
         )}
       </CardContent>
+
+      {/* Delete Edge Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmEdgeId} onOpenChange={(isOpen: boolean) => !isOpen && setDeleteConfirmEdgeId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this choice?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete this choice/path from your story.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmEdgeId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirmEdgeId) {
+                  handleDeleteEdge(deleteConfirmEdgeId).catch((err) => console.error('Failed to delete:', err));
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <SavedSuggestionsViewer
         storyId={storyId}
