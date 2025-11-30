@@ -193,8 +193,8 @@ function LocalNodeGraph({
         // Auto-fit after render - wait for SVG to have proper dimensions
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            // Use void IIFE to handle async code without returning Promise
-            void (async () => {
+            // Handle async code with proper error handling
+            (async () => {
               if (!isMounted || !containerRef.current || !svgWrapperRef.current) return;
               
               const svgElement = svgWrapperRef.current.querySelector('svg');
@@ -264,7 +264,10 @@ function LocalNodeGraph({
                 setPosition(centeredPosition);
                 setInitialPosition(centeredPosition);
               }
-            })();
+            })().catch((err) => {
+              console.error('Failed to auto-fit graph:', err);
+              // Don't set error state since this is a non-critical enhancement
+            });
           });
         });
       } catch (err) {

@@ -21,7 +21,7 @@ export const saveSuggestion = mutation({
   args: {
     storyId: v.optional(v.id('stories')),
     nodeId: v.optional(v.id('nodes')),
-    type: v.string(),
+    type: v.union(v.literal('improvement'), v.literal('choices'), v.literal('rewrite'), v.literal('enhance')),
     originalContent: v.string(),
     suggestions: v.optional(v.string()),
     exampleEdits: v.optional(v.object({
@@ -89,18 +89,31 @@ export const listMySuggestions = query({
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     
-    // Start with base query by user
-    let query = ctx.db
-      .query('savedSuggestions')
-      .withIndex('by_user', (q) => q.eq('userId', user._id));
+    // Use composite indexes when both parameters are provided for better performance
+    let query;
     
-    // Apply filters using Convex's filter API for better performance
     if (args.storyId !== undefined) {
-      query = query.filter((q) => q.eq(q.field('storyId'), args.storyId));
+      // Use by_user_story index for efficient querying by story
+      query = ctx.db
+        .query('savedSuggestions')
+        .withIndex('by_user_story', (q) => 
+          q.eq('userId', user._id).eq('storyId', args.storyId)
+        );
+    } else if (args.nodeId !== undefined) {
+      // Use by_user_node index for efficient querying by node
+      query = ctx.db
+        .query('savedSuggestions')
+        .withIndex('by_user_node', (q) => 
+          q.eq('userId', user._id).eq('nodeId', args.nodeId)
+        );
+    } else {
+      // Fallback to by_user index
+      query = ctx.db
+        .query('savedSuggestions')
+        .withIndex('by_user', (q) => q.eq('userId', user._id));
     }
-    if (args.nodeId !== undefined) {
-      query = query.filter((q) => q.eq(q.field('nodeId'), args.nodeId));
-    }
+    
+    // Apply type filter if provided (type is not in any index, so we filter after query)
     if (args.type !== undefined) {
       query = query.filter((q) => q.eq(q.field('type'), args.type));
     }
