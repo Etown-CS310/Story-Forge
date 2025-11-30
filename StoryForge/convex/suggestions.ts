@@ -1,15 +1,16 @@
 // convex/suggestions.ts
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import type { MutationCtx, QueryCtx } from './_generated/server';
 
-// Helper to get current user
-async function getCurrentUser(ctx: any) {
+// Helper to get current user - properly typed
+async function getCurrentUser(ctx: MutationCtx | QueryCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error('Unauthorized');
   
   const user = await ctx.db
     .query('users')
-    .withIndex('by_externalId', (q: any) => q.eq('externalId', identity.subject))
+    .withIndex('by_externalId', (q) => q.eq('externalId', identity.subject))
     .unique();
   
   if (!user) throw new Error('User not found');
@@ -88,19 +89,26 @@ export const listMySuggestions = query({
   handler: async (ctx, args) => {
     const user = await getCurrentUser(ctx);
     
+    // Start with base query by user
     let query = ctx.db
       .query('savedSuggestions')
-      .withIndex('by_user', (q: any) => q.eq('userId', user._id));
+      .withIndex('by_user', (q) => q.eq('userId', user._id));
+    
+    // Apply filters using Convex's filter API for better performance
+    if (args.storyId !== undefined) {
+      query = query.filter((q) => q.eq(q.field('storyId'), args.storyId));
+    }
+    if (args.nodeId !== undefined) {
+      query = query.filter((q) => q.eq(q.field('nodeId'), args.nodeId));
+    }
+    if (args.type !== undefined) {
+      query = query.filter((q) => q.eq(q.field('type'), args.type));
+    }
     
     const all = await query.collect();
     
-    // Filter by storyId, nodeId, and type if provided
-    return all.filter(s => {
-      if (args.storyId && s.storyId !== args.storyId) return false;
-      if (args.nodeId && s.nodeId !== args.nodeId) return false;
-      if (args.type && s.type !== args.type) return false;
-      return true;
-    }).sort((a, b) => b._creationTime - a._creationTime);
+    // Sort by creation time descending (newest first)
+    return all.sort((a, b) => b._creationTime - a._creationTime);
   },
 });
 
