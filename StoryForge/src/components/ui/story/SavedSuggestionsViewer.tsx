@@ -5,13 +5,14 @@ import { Id } from '@/../convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Lightbulb, Sparkles, Trash2, Copy, FileText, PenLine, Plus, Book } from 'lucide-react';
+import { Lightbulb, Sparkles, Trash2, Copy, FileText, PenLine, Plus, Book, Check } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 
 interface SavedSuggestionsViewerProps {
@@ -34,6 +35,8 @@ export default function SavedSuggestionsViewer({
   const [filterType, setFilterType] = React.useState<string>('all');
   const [selectedId, setSelectedId] = React.useState<Id<'savedSuggestions'> | null>(null);
   const [note, setNote] = React.useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<Id<'savedSuggestions'> | null>(null);
+  const [copySuccess, setCopySuccess] = React.useState<boolean>(false);
 
   const suggestions = useQuery(api.suggestions.listMySuggestions, {
     storyId,
@@ -64,13 +67,20 @@ export default function SavedSuggestionsViewer({
     }
   }, [selectedSuggestion]);
 
-  const handleDelete = async (id: Id<'savedSuggestions'>) => {
-    if (confirm('Are you sure you want to delete this saved suggestion?')) {
-      await deleteSuggestion({ id });
-      if (selectedId === id) {
-        setSelectedId(null);
-      }
+  // Reset copy success after 2 seconds
+  React.useEffect(() => {
+    if (copySuccess) {
+      const timer = setTimeout(() => setCopySuccess(false), 2000);
+      return () => clearTimeout(timer);
     }
+  }, [copySuccess]);
+
+  const handleDelete = async (id: Id<'savedSuggestions'>) => {
+    await deleteSuggestion({ id });
+    if (selectedId === id) {
+      setSelectedId(null);
+    }
+    setDeleteConfirmId(null);
   };
 
   const handleUpdateNote = async () => {
@@ -80,7 +90,9 @@ export default function SavedSuggestionsViewer({
 
   const handleCopyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
-      .then(() => alert('Copied to clipboard!'))
+      .then(() => {
+        setCopySuccess(true);
+      })
       .catch((err) => console.error('Failed to copy:', err));
   };
 
@@ -166,7 +178,7 @@ export default function SavedSuggestionsViewer({
                         variant="destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(item._id).catch((err) => console.error('Failed to delete:', err));
+                          setDeleteConfirmId(item._id);
                         }}
                         className="gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                       >
@@ -197,8 +209,46 @@ export default function SavedSuggestionsViewer({
       </DialogContent>
     </Dialog>
 
+    {/* Delete Confirmation Dialog */}
+    <Dialog open={!!deleteConfirmId} onOpenChange={(isOpen: boolean) => !isOpen && setDeleteConfirmId(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete saved suggestion?</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently delete this saved suggestion.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            onClick={() => setDeleteConfirmId(null)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (deleteConfirmId) {
+                handleDelete(deleteConfirmId).catch((err) => console.error('Failed to delete:', err));
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Copy Success Indicator */}
+    {copySuccess && (
+      <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-5">
+        <Check className="w-4 h-4" />
+        Copied to clipboard!
+      </div>
+    )}
+
     {/* Detail Dialog */}
-    <Dialog open={!!selectedId} onOpenChange={(open) => !open && setSelectedId(null)}>
+    <Dialog open={!!selectedId} onOpenChange={(isOpen: boolean) => !isOpen && setSelectedId(null)}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -301,9 +351,9 @@ export default function SavedSuggestionsViewer({
                     Generated Choices
                   </h3>
                   <div className="space-y-2">
-                    {selectedSuggestion.choices.map((choice, idx) => (
+                    {selectedSuggestion.choices.map((choice) => (
                       <div
-                        key={idx}
+                        key={`${choice.label}-${choice.title ?? ''}-${choice.description.slice(0, 20)}`}
                         className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800"
                       >
                         <div className="flex items-start justify-between mb-2">
