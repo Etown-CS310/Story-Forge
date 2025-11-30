@@ -49,13 +49,24 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   const generateChoices = useAction(api.ai.generateChoices);
   const saveSuggestion = useMutation(api.suggestions.saveSuggestion);
 
+  // Store timeout IDs for cleanup
+  const timeoutsRef = React.useRef<NodeJS.Timeout[]>([]);
+
   // Clear save error after 3 seconds
   React.useEffect(() => {
     if (saveError) {
       const timer = setTimeout(() => setSaveError(''), 3000);
+      timeoutsRef.current.push(timer);
       return () => clearTimeout(timer);
     }
   }, [saveError]);
+
+  // Cleanup all timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Moved after all state declarations for better organization
   const clearResults = () => {
@@ -83,8 +94,9 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       try {
         await suggestImprovements({ content: '' });
         setApiKeyMissing(false);
-      } catch (err: any) {
-        if (err.message?.includes('OPENAI_API_KEY')) {
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        if (errorMsg.includes('OPENAI_API_KEY')) {
           setApiKeyMissing(true);
         }
       }
@@ -109,14 +121,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       } else {
         setError('AI response missing required fields. Please try again.');
       }
-    } catch (err: any) {
-      if (err.message?.includes('OPENAI_API_KEY')) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('OPENAI_API_KEY')) {
         setApiKeyMissing(true);
         setError('AI service is not configured. Please contact support.');
         console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError('Failed to get suggestions. Please try again.');
-        console.error('Suggestion error:', err);
+        console.error('Suggestion error:', errorMsg);
       }
     } finally {
       setLoading(false);
@@ -136,10 +149,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         exampleEdits,
       });
       setSavedSuggestion(true);
-      setTimeout(() => setSavedSuggestion(false), 2000);
-    } catch (err: any) {
+      const timer = setTimeout(() => setSavedSuggestion(false), 2000);
+      timeoutsRef.current.push(timer);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       setSaveError('Failed to save suggestion. Please try again.');
-      console.error('Save error:', err);
+      console.error('Save error:', errorMsg);
     }
   };
 
@@ -155,10 +170,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         choices: generatedChoices,
       });
       setSavedChoices(true);
-      setTimeout(() => setSavedChoices(false), 2000);
-    } catch (err: any) {
+      const timer = setTimeout(() => setSavedChoices(false), 2000);
+      timeoutsRef.current.push(timer);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       setSaveError('Failed to save choices. Please try again.');
-      console.error('Save error:', err);
+      console.error('Save error:', errorMsg);
     }
   };
 
@@ -174,10 +191,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         content: result,
       });
       setSavedRewrite(true);
-      setTimeout(() => setSavedRewrite(false), 2000);
-    } catch (err: any) {
+      const timer = setTimeout(() => setSavedRewrite(false), 2000);
+      timeoutsRef.current.push(timer);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       setSaveError('Failed to save rewrite. Please try again.');
-      console.error('Save error:', err);
+      console.error('Save error:', errorMsg);
     }
   };
 
@@ -193,10 +212,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         content: feedbackResult,
       });
       setSavedFeedback(true);
-      setTimeout(() => setSavedFeedback(false), 2000);
-    } catch (err: any) {
+      const timer = setTimeout(() => setSavedFeedback(false), 2000);
+      timeoutsRef.current.push(timer);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
       setSaveError('Failed to save feedback result. Please try again.');
-      console.error('Save error:', err);
+      console.error('Save error:', errorMsg);
     }
   };
 
@@ -213,14 +234,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       const rewritten = await rewriteContent({ content });
       setResult(rewritten);
       setLastResultType('rewrite');
-    } catch (err: any) {
-      if (err.message?.includes('OPENAI_API_KEY')) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('OPENAI_API_KEY')) {
         setApiKeyMissing(true);
         setError('AI service is not configured. Please contact support.');
         console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError('Failed to rewrite content. Please try again.');
-        console.error('Rewrite error:', err);
+        console.error('Rewrite error:', errorMsg);
       }
     } finally {
       setLoading(false);
@@ -245,14 +267,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       const rewritten = await rewriteContent({ content, tone: customTone });
       setResult(rewritten);
       setLastResultType('rewrite');
-    } catch (err: any) {
-      if (err.message?.includes('OPENAI_API_KEY')) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('OPENAI_API_KEY')) {
         setApiKeyMissing(true);
         setError('AI service is not configured. Please contact support.');
         console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError('Failed to apply tone. Please try again.');
-        console.error('Tone error:', err);
+        console.error('Tone error:', errorMsg);
       }
     } finally {
       setLoading(false);
@@ -277,14 +300,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       const enhanced = await enhanceContent({ content, targetLength: expandLength.trim() });
       setResult(enhanced);
       setLastResultType('enhance');
-    } catch (err: any) {
-      if (err.message?.includes('OPENAI_API_KEY')) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('OPENAI_API_KEY')) {
         setApiKeyMissing(true);
         setError('AI service is not configured. Please contact support.');
         console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError('Failed to enhance content. Please try again.');
-        console.error('Enhance error:', err);
+        console.error('Enhance error:', errorMsg);
       }
     } finally {
       setLoading(false);
@@ -315,14 +339,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
       } else {
         setError('Failed to generate choices. Please try again.');
       }
-    } catch (err: any) {
-      if (err.message?.includes('OPENAI_API_KEY')) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('OPENAI_API_KEY')) {
         setApiKeyMissing(true);
         setError('AI service is not configured. Please contact support.');
         console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError('Failed to generate choices. Please try again.');
-        console.error('Generate choices error:', err);
+        console.error('Generate choices error:', errorMsg);
       }
     } finally {
       setLoading(false);
@@ -349,14 +374,15 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
         feedback: feedback
       });
       setFeedbackResult(feedbackResponse);
-    } catch (err: any) {
-      if (err.message?.includes('OPENAI_API_KEY')) {
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes('OPENAI_API_KEY')) {
         setApiKeyMissing(true);
         setError('AI service is not configured. Please contact support.');
         console.error('OpenAI API key not configured. Run: npx convex env set OPENAI_API_KEY your-key');
       } else {
         setError('Failed to apply feedback. Please try again.');
-        console.error('Feedback error:', err);
+        console.error('Feedback error:', errorMsg);
       }
     } finally {
       setLoading(false);

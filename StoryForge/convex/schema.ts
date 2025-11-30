@@ -128,7 +128,12 @@ export default defineSchema({
     userId: v.id('users'),
     storyId: v.optional(v.id('stories')),
     nodeId: v.optional(v.id('nodes')),
-    type: v.string(), // "improvement", "choice", "rewrite", etc.
+    type: v.union(
+      v.literal('improvement'),
+      v.literal('choices'),
+      v.literal('rewrite'),
+      v.literal('enhance')
+    ), // Only allowed values
     
     // For improvement suggestions
     suggestions: v.optional(v.string()),

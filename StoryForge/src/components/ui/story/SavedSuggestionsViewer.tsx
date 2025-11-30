@@ -15,6 +15,19 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+// Helper function to format dates consistently
+const formatDateTime = (timestamp: number): string => {
+  return new Date(timestamp).toLocaleString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+};
+
 interface SavedSuggestionsViewerProps {
   onApplySuggestion?: (content: string, title?: string) => void;
   onApplyChoice?: (label: string, description: string, title?: string) => void;
@@ -190,15 +203,7 @@ export default function SavedSuggestionsViewer({
                       {item.originalContent.slice(0, 100)}...
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                      {new Date(item._creationTime).toLocaleString('en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false
-                      })}
+                      {formatDateTime(item._creationTime)}
                     </div>
                   </div>
                 ))}
@@ -256,7 +261,7 @@ export default function SavedSuggestionsViewer({
             Saved Suggestion Details
           </DialogTitle>
           <DialogDescription>
-              {selectedSuggestion && new Date(selectedSuggestion._creationTime).toLocaleString()}
+              {selectedSuggestion && formatDateTime(selectedSuggestion._creationTime)}
             </DialogDescription>
           </DialogHeader>
 
@@ -351,9 +356,9 @@ export default function SavedSuggestionsViewer({
                     Generated Choices
                   </h3>
                   <div className="space-y-2">
-                    {selectedSuggestion.choices.map((choice) => (
+                    {selectedSuggestion.choices.map((choice, index) => (
                       <div
-                        key={`${choice.label}-${choice.title ?? ''}-${choice.description.slice(0, 20)}`}
+                        key={`choice-${selectedSuggestion._id}-${index}`}
                         className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800"
                       >
                         <div className="flex items-start justify-between mb-2">
