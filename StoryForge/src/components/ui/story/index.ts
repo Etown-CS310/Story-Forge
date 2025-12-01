@@ -7,3 +7,4 @@ export { default as StoryGraphViewer } from './StoryGraphViewer';
 export { default as AIAssistant } from './AIAssistant';
 export { default as StoryDialogTooltip } from './StoryDialogToolTip';
 export { default as StoryDialog } from './StoryDialog';
+export { default as SavedSuggestionsViewer } from './SavedSuggestionsViewer';

@@ -6,10 +6,588 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp, GitBranch } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
+import SavedSuggestionsViewer from './SavedSuggestionsViewer';
+
+// Constants for graph scaling
+const MIN_SCALE_MULTIPLIER = 0.8;
+const MAX_SCALE_MULTIPLIER = 8;
+const CONTAINER_WIDTH_PADDING = 0.88; // 88% of container width
+const CONTAINER_HEIGHT_PADDING = 0.85; // 85% of container height
+const SVG_DIMENSION_TIMEOUT_MS = 500;
+
+// Mini graph component showing current node and immediate children
+function LocalNodeGraph({ 
+  currentNodeId, 
+  nodes, 
+  edges, 
+  isDarkMode 
+}: { 
+  currentNodeId: Id<'nodes'> | null;
+  nodes: any[];
+  edges: any[];
+  isDarkMode: boolean;
+}) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const svgWrapperRef = React.useRef<HTMLDivElement>(null);
+  const [svgContent, setSvgContent] = React.useState<string>('');
+  const [renderState, setRenderState] = React.useState<'loading' | 'success' | 'error'>('loading');
+  const [errorMsg, setErrorMsg] = React.useState<string>('');
+  
+  // Zoom and pan state
+  const [scale, setScale] = React.useState(1);
+  const [baseScale, setBaseScale] = React.useState(1);
+  const [position, setPosition] = React.useState({ x: 0, y: 0 });
+  const [initialPosition, setInitialPosition] = React.useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = React.useState(false);
+  const [isEditingZoom, setIsEditingZoom] = React.useState(false);
+  const [zoomInput, setZoomInput] = React.useState('100');
+
+  React.useEffect(() => {
+    if (!currentNodeId) {
+      setRenderState('error');
+      setErrorMsg('Missing node ID');
+      return;
+    }
+
+    // Track if component is mounted
+    let isMounted = true;
+
+    const renderMermaid = async () => {
+      try {
+        setRenderState('loading');
+        setSvgContent('');
+        
+        const mermaid = (await import('mermaid')).default;
+        
+        // Initialize mermaid (not async, no await needed)
+        mermaid.initialize({ 
+          startOnLoad: false,
+          theme: isDarkMode ? 'dark' : 'default',
+          flowchart: {
+            curve: 'basis',
+            padding: 8,
+            nodeSpacing: 25,
+            rankSpacing: 25,
+          }
+        });
+
+        // Find current node
+        const currentNode = nodes.find(n => n._id === currentNodeId);
+        if (!currentNode) {
+          console.error('LocalNodeGraph - current node not found');
+          if (isMounted) {
+            setRenderState('error');
+            setErrorMsg('Current node not found');
+          }
+          return;
+        }
+
+        // Find edges from current node
+        const outgoingEdges = edges.filter(e => e.fromNodeId === currentNodeId);
+
+        if (outgoingEdges.length === 0) {
+          if (isMounted) {
+            setRenderState('error');
+            setErrorMsg('No outgoing paths to display');
+          }
+          return;
+        }
+        
+        // Find child nodes
+        const childNodeIds = outgoingEdges.map(e => e.toNodeId);
+        const childNodes = nodes.filter(n => childNodeIds.includes(n._id));
+
+        // Build mermaid diagram
+        let diagram = 'graph TD\n';
+        
+        // Helper functions
+        const sanitizeId = (id: string) => 'n' + id.replace(/[^a-zA-Z0-9]/g, '');
+        const truncate = (text: string, maxLen: number) => 
+          text.length <= maxLen ? text : text.substring(0, maxLen - 3) + '...';
+        const escapeMermaidText = (text: string) => {
+          return text
+            .replace(/&/g, '&amp;')
+            .replace(/\n/g, ' ')
+            .replace(/\r/g, '')
+            .replace(/`/g, '&#96;')
+            .replace(/'/g, '&#39;')
+            .replace(/#/g, '&#35;')
+            .replace(/"/g, '&#34;')
+            .replace(/\[/g, '&#91;')
+            .replace(/\]/g, '&#93;')
+            .replace(/{/g, '&#123;')
+            .replace(/}/g, '&#125;')
+            .replace(/\(/g, '&#40;')
+            .replace(/\)/g, '&#41;')
+            .replace(/\|/g, '&#124;')
+            .replace(/</g, '&#60;')
+            .replace(/>/g, '&#62;');
+        };
+
+        // Add current node (highlighted)
+        const currentNodeId_safe = sanitizeId(currentNode._id);
+        const currentNodeText = escapeMermaidText(
+          currentNode.title ? truncate(currentNode.title, 40) : truncate(currentNode.content, 40)
+        );
+        diagram += `  ${currentNodeId_safe}[["📍 ${currentNodeText}"]]\n`;
+
+        // Add child nodes
+        for (const child of childNodes) {
+          const childId = sanitizeId(child._id);
+          const childText = escapeMermaidText(
+            child.title ? truncate(child.title, 40) : truncate(child.content, 40)
+          );
+          diagram += `  ${childId}["${childText}"]\n`;
+        }
+
+        diagram += '\n';
+
+        // Add edges
+        for (const edge of outgoingEdges) {
+          const fromId = sanitizeId(edge.fromNodeId);
+          const toId = sanitizeId(edge.toNodeId);
+          const label = escapeMermaidText(truncate(edge.label, 30));
+          
+          let suffix = '';
+          if (edge.conditions) suffix += ' 🔒';
+          if (edge.effects) suffix += ' ⚡';
+          
+          diagram += `  ${fromId} -->|"${label}${suffix}"| ${toId}\n`;
+        }
+
+        // Style current node
+        if (isDarkMode) {
+          diagram += `\n  style ${currentNodeId_safe} fill:#1e40af,stroke:#3b82f6,stroke-width:3px,color:#dbeafe\n`;
+        } else {
+          diagram += `\n  style ${currentNodeId_safe} fill:#93c5fd,stroke:#2563eb,stroke-width:3px,color:#1e3a8a\n`;
+        }
+
+        const uniqueId = 'mermaid-mini-' + currentNodeId.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
+        const { svg } = await mermaid.render(uniqueId, diagram);
+        
+        // Add inline styles to the SVG
+        const styledSvg = svg.replace(
+          '<svg',
+          '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;"'
+        );
+        
+        if (isMounted) {
+          setSvgContent(styledSvg);
+          setRenderState('success');
+        }
+        
+        // Auto-fit after render - wait for SVG to have proper dimensions
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Handle async code with proper error handling
+            (async () => {
+              if (!isMounted || !containerRef.current || !svgWrapperRef.current) return;
+              
+              const svgElement = svgWrapperRef.current.querySelector('svg');
+              if (!svgElement) return;
+              
+              // Wait for the SVG to have non-zero dimensions (max timeout)
+              const start = performance.now();
+              await new Promise<void>(resolve => {
+                let resolved = false;
+                
+                function check() {
+                  if (resolved || !isMounted) return;
+                  
+                  if (!svgElement || !containerRef.current) {
+                    resolved = true;
+                    resolve();
+                    return;
+                  }
+                  
+                  // Force a reflow to ensure we get accurate dimensions
+                  const rect = svgElement.getBoundingClientRect();
+                  
+                  if (rect.width > 0 && rect.height > 0) {
+                    resolved = true;
+                    resolve();
+                  } else if (performance.now() - start > SVG_DIMENSION_TIMEOUT_MS) {
+                    // Timeout
+                    resolved = true;
+                    resolve();
+                  } else {
+                    requestAnimationFrame(check);
+                  }
+                }
+                
+                check();
+              });
+              
+              // Check if still mounted before setting state
+              if (!isMounted) return;
+              
+              // Now calculate the fit
+              const svgRect = svgElement.getBoundingClientRect();
+              const containerRect = containerRef.current.getBoundingClientRect();
+              
+              // Calculate scale to fit with padding multipliers
+              let fitScale = 1;
+              if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
+                const scaleX = (containerRect.width * CONTAINER_WIDTH_PADDING) / svgRect.width;
+                const scaleY = (containerRect.height * CONTAINER_HEIGHT_PADDING) / svgRect.height;
+                // Use the smaller scale to ensure everything fits
+                fitScale = Math.min(scaleX, scaleY);
+                // Clamp between min and max scale multipliers
+                fitScale = Math.max(MIN_SCALE_MULTIPLIER, Math.min(fitScale, MAX_SCALE_MULTIPLIER));
+              }
+              
+              // Center the content
+              const scaledWidth = svgRect.width * fitScale;
+              const scaledHeight = svgRect.height * fitScale;
+              const centerX = (containerRect.width - scaledWidth) / 2;
+              const centerY = (containerRect.height - scaledHeight) / 2;
+              
+              // Only set state if still mounted
+              if (isMounted) {
+                setBaseScale(fitScale);
+                setScale(fitScale);
+                const centeredPosition = { x: centerX, y: centerY };
+                setPosition(centeredPosition);
+                setInitialPosition(centeredPosition);
+              }
+            })().catch((err) => {
+              console.error('Failed to auto-fit graph:', err);
+              // Don't set error state since this is a non-critical enhancement
+            });
+          });
+        });
+      } catch (err) {
+        console.error('LocalNodeGraph - Error:', err);
+        if (isMounted) {
+          setRenderState('error');
+          setErrorMsg('Failed to render: ' + (err as Error).message);
+        }
+      }
+    };
+
+    void renderMermaid();
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
+  }, [currentNodeId, nodes, edges, isDarkMode]);
+
+  // Wheel zoom handler
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleNativeWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const delta = e.deltaY * -0.001;
+      setScale(prevScale => {
+        const safeBaseScale = baseScale > 0 ? baseScale : 1;
+        const minZoom = Math.max(0.1, safeBaseScale * 0.1);
+        const maxZoom = safeBaseScale * MAX_SCALE_MULTIPLIER;
+        const newScale = Math.min(Math.max(minZoom, prevScale + delta * safeBaseScale), maxZoom);
+        return newScale;
+      });
+    };
+
+    container.addEventListener('wheel', handleNativeWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleNativeWheel);
+  }, [baseScale]);
+
+  // Zoom button handlers - declare BEFORE keyboard navigation that uses them
+  const resetView = React.useCallback(() => {
+    setScale(baseScale);
+    setPosition(initialPosition);
+  }, [baseScale, initialPosition]);
+
+  const zoomIn = React.useCallback(() => {
+    if (baseScale > 0) {
+      setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * MAX_SCALE_MULTIPLIER));
+    }
+  }, [baseScale]);
+  
+  const zoomOut = React.useCallback(() => {
+    if (baseScale > 0) {
+      const minZoom = Math.max(0.1, baseScale * 0.1);
+      setScale(prevScale => Math.max(prevScale - baseScale * 0.1, minZoom));
+    }
+  }, [baseScale]);
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const panStep = 30;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x, y: pos.y + panStep }));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x, y: pos.y - panStep }));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x + panStep, y: pos.y }));
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setPosition(pos => ({ x: pos.x - panStep, y: pos.y }));
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+        case '_':
+          e.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          resetView();
+          break;
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+    return () => container.removeEventListener('keydown', handleKeyDown);
+  }, [zoomIn, zoomOut, resetView]);
+
+  // Mouse drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setIsHovering(false);
+  };
+  
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+  };
+
+  // Zoom input handlers
+  const handleZoomClick = () => {
+    setIsEditingZoom(true);
+    const safeBaseScale = baseScale > 0 ? baseScale : 1;
+    setZoomInput(Math.round((scale / safeBaseScale) * 100).toString());
+  };
+
+  const handleZoomInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setZoomInput(e.target.value);
+  };
+
+  const handleZoomInputBlur = () => {
+    const value = parseInt(zoomInput, 10);
+
+    if (baseScale <= 0) {
+      setIsEditingZoom(false);
+      return;
+    }
+
+    if (!isNaN(value)) {
+      const clamped = Math.min(Math.max(value, 10), 300);
+      setScale((clamped / 100) * baseScale);
+      setZoomInput(clamped.toString());
+    } else {
+      setZoomInput(Math.round((scale / baseScale) * 100).toString());
+    }
+
+    setIsEditingZoom(false);
+  };
+
+  const handleZoomInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleZoomInputBlur();
+    } else if (e.key === 'Escape') {
+      setIsEditingZoom(false);
+      if (baseScale > 0) {
+        setZoomInput(Math.round((scale / baseScale) * 100).toString());
+      } else {
+        setZoomInput('100');
+      }
+    }
+  };
+
+  if (renderState === 'loading') {
+    return (
+      <div className="w-full space-y-3">
+        <div className="flex items-center gap-2">
+          <button
+            disabled
+            aria-label="Zoom out (disabled while loading)"
+            className="px-3 py-1.5 text-sm font-semibold bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded cursor-not-allowed"
+          >
+            −
+          </button>
+          <div className="min-w-[60px] px-2 py-1 text-xs text-center font-medium text-slate-400 dark:text-slate-500">
+            ...
+          </div>
+          <button
+            disabled
+            aria-label="Zoom in (disabled while loading)"
+            className="px-3 py-1.5 text-sm font-semibold bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded cursor-not-allowed"
+          >
+            +
+          </button>
+          <button
+            disabled
+            aria-label="Reset view (disabled while loading)"
+            className="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded cursor-not-allowed"
+          >
+            Reset
+          </button>
+        </div>
+        <div className="w-full min-h-[200px] flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 dark:border-blue-400 border-t-transparent" />
+            <span className="text-sm text-slate-500 dark:text-slate-400">Rendering graph...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (renderState === 'error') {
+    return (
+      <div className="w-full min-h-[200px] flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+        <div className="text-sm text-amber-700 dark:text-amber-300 text-center py-6 px-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700">
+          <div className="font-medium mb-1">Unable to display graph</div>
+          {errorMsg && <div className="text-xs opacity-75">{errorMsg}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-3">
+      {/* Zoom controls */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={zoomOut}
+          aria-label="Zoom out"
+          className="px-3 py-1.5 text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded transition-colors"
+          title="Zoom out"
+        >
+          −
+        </button>
+        {isEditingZoom ? (
+          <input
+            type="number"
+            value={zoomInput}
+            onChange={handleZoomInputChange}
+            onBlur={handleZoomInputBlur}
+            onKeyDown={handleZoomInputKeyDown}
+            autoFocus
+            min="10"
+            max="300"
+            aria-label="Enter zoom percentage"
+            className="w-[60px] px-2 py-1 text-xs text-center border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        ) : (
+          <button
+            onClick={handleZoomClick}
+            aria-label={`Current zoom: ${baseScale > 0 ? Math.round((scale / baseScale) * 100) : 100}%. Click to edit.`}
+            className="min-w-[60px] px-2 py-1 text-xs text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors border border-slate-300 dark:border-slate-600"
+            title="Click to enter zoom level"
+          >
+            {baseScale > 0 ? Math.round((scale / baseScale) * 100) : 100}%
+          </button>
+        )}
+        <button
+          onClick={zoomIn}
+          aria-label="Zoom in"
+          className="px-3 py-1.5 text-sm font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded transition-colors"
+          title="Zoom in"
+        >
+          +
+        </button>
+        <button
+          onClick={resetView}
+          aria-label="Reset view to optimal fit"
+          className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded transition-colors"
+          title="Reset to optimal fit"
+        >
+          Reset
+        </button>
+        <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
+          {isHovering ? 'Scroll to zoom' : 'Hover to zoom'}, drag to pan
+        </span>
+      </div>
+
+      {/* Interactive graph container */}
+      <div 
+        ref={containerRef}
+        className={`bg-slate-50 dark:bg-slate-900/50 rounded-lg border-2 transition-colors ${
+          isHovering 
+            ? 'border-blue-400 dark:border-blue-600' 
+            : 'border-slate-200 dark:border-slate-700'
+        } p-4 relative focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400`}
+        style={{ 
+          height: '400px',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onMouseEnter={handleMouseEnter}
+        tabIndex={0}
+        role="img"
+        aria-label="Interactive story graph showing current scene and available paths"
+      >
+        <div 
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transformOrigin: 'top left',
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+          }}
+          className="inline-block"
+        >
+          <div ref={svgWrapperRef} dangerouslySetInnerHTML={{ __html: svgContent }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories'>; onClose: () => void }) {
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
@@ -27,6 +605,16 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
   const [isFullHeight, setIsFullHeight] = React.useState(false);
+  const [savedSuggestionsOpen, setSavedSuggestionsOpen] = React.useState(false);
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
+  const [deleteConfirmEdgeId, setDeleteConfirmEdgeId] = React.useState<Id<'edges'> | null>(null);
+  
+  // Set initial dark mode state on client side
+  React.useEffect(() => {
+    if (typeof document !== 'undefined') {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    }
+  }, []);
   
   // Ref for scrolling to the Add Scene section
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
@@ -34,12 +622,33 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
   const aiAssistantKey = selectedNodeId ?? 'no-node';
 
-  // Reset to root node and graph view when story changes
+  // Watch for dark mode changes
+  React.useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  // Reset to graph view when story changes (don't reset when graph data updates)
+  React.useEffect(() => {
+    setViewMode('graph');
+    setSelectedNodeId(null); // Reset selected node so root will be selected when graph loads
+  }, [storyId]);
+
+  // Initialize selectedNodeId to root node when graph loads
   React.useEffect(() => {
     if (!graph) return;
-    setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
-    setViewMode('graph');
-  }, [storyId, graph]);
+    if (!selectedNodeId) {
+      setSelectedNodeId(graph.rootNodeId as Id<'nodes'>);
+    }
+  }, [graph, selectedNodeId]);
 
   // Update content when selected node changes
   React.useEffect(() => {
@@ -48,6 +657,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
   }, [graph, selectedNodeId]);
+
+  const handleDeleteEdge = async (edgeId: Id<'edges'>) => {
+    await deleteEdge({ edgeId });
+    setDeleteConfirmEdgeId(null);
+  };
 
   if (!graph)
     return (
@@ -191,10 +805,13 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 value={nodeContent}
                 onChange={(e) => setNodeContent(e.target.value)}
               />
+
               {/* Add key prop to force remount when selectedNodeId changes */}
               <AIAssistant
                 key={aiAssistantKey}
                 content={nodeContent}
+                storyId={storyId}
+                nodeId={selectedNodeId ?? undefined}
                 onApplySuggestion={(newContent, newTitle) => {
                   setNodeContent(newContent);
                   if (newTitle) {
@@ -205,7 +822,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   setNewChoiceLabel(label);
                   setNewNodeContent(description);
                   setNewSceneTitle(title || '');
-                  // Scroll to the Add Scene section
                   requestAnimationFrame(() => {
                     const el = addSceneSectionRef.current;
                     if (el) {
@@ -216,7 +832,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     }
                   });
                 }}
+                onOpenSavedViewer={() => setSavedSuggestionsOpen(true)}
               />
+              
               <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {
@@ -238,6 +856,26 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 )}
               </div>
 
+              {/* NEW: Local Node Graph showing current node and immediate children */}
+              {outgoing.length > 0 && (
+                <div className="mt-6">
+                  <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-5 bg-white dark:bg-slate-800">
+                    <div className="flex items-center gap-2 mb-4">
+                      <GitBranch className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Current Paths Preview
+                      </div>
+                    </div>
+                    <LocalNodeGraph
+                      currentNodeId={selectedNodeId}
+                      nodes={graph.nodes}
+                      edges={graph.edges}
+                      isDarkMode={isDarkMode}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Outgoing edges */}
               <div className="mt-6">
                 <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Outgoing Choices</div>
@@ -247,7 +885,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     return (
                       <div
                         key={e._id}
-                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all"
                       >
                         <div className="flex-1 min-w-0 pr-3">
                           <div className="font-medium text-sm text-slate-800 dark:text-white">{e.label}</div>
@@ -258,12 +896,8 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => {
-                            void (async () => {
-                              await deleteEdge({ edgeId: e._id });
-                            })();
-                          }}
-                          className="flex-shrink-0 gap-2"
+                          onClick={() => setDeleteConfirmEdgeId(e._id)}
+                          className="flex-shrink-0 gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
@@ -337,6 +971,54 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
           </div>
         )}
       </CardContent>
+
+      {/* Delete Edge Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmEdgeId} onOpenChange={(isOpen: boolean) => !isOpen && setDeleteConfirmEdgeId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this choice?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete this choice/path from your story.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmEdgeId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deleteConfirmEdgeId) {
+                  handleDeleteEdge(deleteConfirmEdgeId).catch((err) => console.error('Failed to delete:', err));
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <SavedSuggestionsViewer
+        storyId={storyId}
+        nodeId={selectedNodeId ?? undefined}
+        open={savedSuggestionsOpen}
+        onOpenChange={setSavedSuggestionsOpen}
+        onApplySuggestion={(content, title) => {
+          setNodeContent(content);
+          if (title) setNodeTitle(title);
+          setSavedSuggestionsOpen(false);
+        }}
+        onApplyChoice={(label, desc, title) => {
+          setNewChoiceLabel(label);
+          setNewNodeContent(desc);
+          setNewSceneTitle(title || '');
+          setSavedSuggestionsOpen(false);
+        }}
+      />
     </Card>
   );
 }
