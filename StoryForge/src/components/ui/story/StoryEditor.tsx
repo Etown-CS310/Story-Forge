@@ -23,8 +23,8 @@ import SavedSuggestionsViewer from './SavedSuggestionsViewer';
 // Constants for graph scaling
 const MIN_SCALE_MULTIPLIER = 0.8;
 const MAX_SCALE_MULTIPLIER = 8;
-const CONTAINER_WIDTH_PADDING = 0.88; // 88% of container width
-const CONTAINER_HEIGHT_PADDING = 0.85; // 85% of container height
+const CONTAINER_WIDTH_PADDING = 0.88;
+const CONTAINER_HEIGHT_PADDING = 0.85;
 const SVG_DIMENSION_TIMEOUT_MS = 500;
 
 // Mini graph component showing current node and immediate children
@@ -601,6 +601,8 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
   const [nodeContent, setNodeContent] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
+  const [originalNodeContent, setOriginalNodeContent] = React.useState('');
+  const [originalNodeTitle, setOriginalNodeTitle] = React.useState('');
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
   const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
@@ -608,6 +610,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [savedSuggestionsOpen, setSavedSuggestionsOpen] = React.useState(false);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [deleteConfirmEdgeId, setDeleteConfirmEdgeId] = React.useState<Id<'edges'> | null>(null);
+  const [showCloseWarning, setShowCloseWarning] = React.useState(false);
   
   // Set initial dark mode state on client side
   React.useEffect(() => {
@@ -656,7 +659,40 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     const sel = graph.nodes.find((n: any) => n._id === selectedNodeId);
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
+
+    // Store original values for change detection
+    setOriginalNodeContent(sel?.content ?? '');
+    setOriginalNodeTitle(sel?.title ?? '');
   }, [graph, selectedNodeId]);
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    return nodeContent !== originalNodeContent || nodeTitle !== originalNodeTitle;
+  };
+
+  // Handle close with unsaved changes check
+  const handleClose = () => {
+    if (hasUnsavedChanges()) {
+      setShowCloseWarning(true);
+    } else {
+      onClose();
+    }
+  };
+
+  // Save current node and close
+  const handleSaveAndClose = async () => {
+    if (!selectedNodeId) return;
+    await updateNode({ nodeId: selectedNodeId, content: nodeContent });
+    await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
+    setShowCloseWarning(false);
+    onClose();
+  };
+
+  // Discard changes and close
+  const handleDiscardAndClose = () => {
+    setShowCloseWarning(false);
+    onClose();
+  };
 
   const handleDeleteEdge = async (edgeId: Id<'edges'>) => {
     await deleteEdge({ edgeId });
@@ -715,7 +751,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               Edit
             </button>
           </div>
-          <Button variant="outline" onClick={onClose} className="gap-2">
+          <Button variant="outline" onClick={handleClose} className="gap-2">
             <X className="w-4 h-4" />
             Close
           </Button>
@@ -981,7 +1017,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               This action cannot be undone. This will permanently delete this choice/path from your story.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-3 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => setDeleteConfirmEdgeId(null)}
@@ -997,6 +1033,38 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               }}
             >
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unsaved Changes Warning Dialog */}
+      <Dialog open={showCloseWarning} onOpenChange={(isOpen: boolean) => !isOpen && setShowCloseWarning(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes to this scene. Do you want to save them before closing?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowCloseWarning(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDiscardAndClose}
+            >
+              Discard Changes
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => { void handleSaveAndClose(); }}
+            >
+              Save and Close
             </Button>
           </DialogFooter>
         </DialogContent>
