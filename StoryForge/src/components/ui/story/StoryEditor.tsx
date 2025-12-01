@@ -619,12 +619,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     }
   }, []);
-  
-  // Ref for scrolling to the Add Scene section
-  const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
-
-  // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
-  const aiAssistantKey = selectedNodeId ?? 'no-node';
 
   // Watch for dark mode changes
   React.useEffect(() => {
@@ -665,6 +659,12 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     setOriginalNodeContent(sel?.content ?? '');
     setOriginalNodeTitle(sel?.title ?? '');
   }, [graph, selectedNodeId]);
+
+  // Ref for scrolling to the Add Scene section
+  const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
+
+  // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
+  const aiAssistantKey = selectedNodeId ?? 'no-node';
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = () => {
@@ -973,18 +973,22 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     return (
                       <div
                         key={e._id}
-                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all"
+                        className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all cursor-pointer"
+                        onClick={() => setSelectedNodeId(e.toNodeId)}
                       >
                         <div className="flex-1 min-w-0 pr-3">
                           <div className="font-medium text-sm text-slate-800 dark:text-white">{e.label}</div>
                           <div className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mt-1">
-                            → {(to?.content ?? '').slice(0, 120)}
+                            → {to?.title || (to?.content ?? '').slice(0, 120)}
                           </div>
                         </div>
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => setDeleteConfirmEdgeId(e._id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDeleteConfirmEdgeId(e._id);
+                          }}
                           className="flex-shrink-0 gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
