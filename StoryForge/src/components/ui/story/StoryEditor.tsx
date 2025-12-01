@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp, GitBranch } from 'lucide-react';
+import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp, ChevronDown, ChevronUp, GitBranch } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -611,6 +611,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [deleteConfirmEdgeId, setDeleteConfirmEdgeId] = React.useState<Id<'edges'> | null>(null);
   const [showCloseWarning, setShowCloseWarning] = React.useState(false);
+  const [isPathsExpanded, setIsPathsExpanded] = React.useState(true);
   
   // Set initial dark mode state on client side
   React.useEffect(() => {
@@ -892,22 +893,44 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 )}
               </div>
 
-              {/* NEW: Local Node Graph showing current node and immediate children */}
+              {/* Current Paths Preview with collapsibility */}
               {outgoing.length > 0 && (
                 <div className="mt-6">
                   <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-5 bg-white dark:bg-slate-800">
-                    <div className="flex items-center gap-2 mb-4">
-                      <GitBranch className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Current Paths Preview
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <GitBranch className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          Current Paths Preview
+                        </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsPathsExpanded(!isPathsExpanded)}
+                        className="gap-1.5 h-7 text-xs"
+                      >
+                        {isPathsExpanded ? (
+                          <>
+                            <ChevronUp className="w-3 h-3" />
+                            Collapse
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3 h-3" />
+                            Expand
+                          </>
+                        )}
+                      </Button>
                     </div>
-                    <LocalNodeGraph
-                      currentNodeId={selectedNodeId}
-                      nodes={graph.nodes}
-                      edges={graph.edges}
-                      isDarkMode={isDarkMode}
-                    />
+                    {isPathsExpanded && (
+                      <LocalNodeGraph
+                        currentNodeId={selectedNodeId}
+                        nodes={graph.nodes}
+                        edges={graph.edges}
+                        isDarkMode={isDarkMode}
+                      />
+                    )}
                   </div>
                 </div>
               )}
