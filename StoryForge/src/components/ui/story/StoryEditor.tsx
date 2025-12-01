@@ -683,7 +683,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Save current node and close
   const handleSaveAndClose = async () => {
     if (!selectedNodeId) return;
-    
+
     try {
       await updateNode({ nodeId: selectedNodeId, content: nodeContent });
       await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
@@ -1150,7 +1150,7 @@ function ExistingEdgeCreator({
         <option value="">— Select scene —</option>
         {options.map((n) => (
           <option key={n._id} value={n._id}>
-            {(n.content ?? '').slice(0, 80)}
+            {n.title || (n.content ?? '').slice(0, 80)}
           </option>
         ))}
       </select>
