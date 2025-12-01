@@ -683,10 +683,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Save current node and close
   const handleSaveAndClose = async () => {
     if (!selectedNodeId) return;
-    await updateNode({ nodeId: selectedNodeId, content: nodeContent });
-    await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
-    setShowCloseWarning(false);
-    onClose();
+    
+    try {
+      await updateNode({ nodeId: selectedNodeId, content: nodeContent });
+      await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
+      setOriginalNodeContent(nodeContent);
+      setOriginalNodeTitle(nodeTitle);
+      setShowCloseWarning(false);
+      onClose();
+    } catch (error) {
+      console.error('Failed to save changes:', error);
+    }
   };
 
   // Discard changes and close
@@ -830,6 +837,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     void (async () => {
                       if (!selectedNodeId) return;
                       await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
+                      setOriginalNodeTitle(nodeTitle);
                     })();
                   }}
                 >
@@ -878,6 +886,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     void (async () => {
                       if (!selectedNodeId) return;
                       await updateNode({ nodeId: selectedNodeId, content: nodeContent });
+                      setOriginalNodeContent(nodeContent);
                     })();
                   }}
                   variant="blue"
@@ -1040,7 +1049,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               This action cannot be undone. This will permanently delete this choice/path from your story.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-3 sm:gap-0">
+          <DialogFooter className="gap-3">
             <Button
               variant="outline"
               onClick={() => setDeleteConfirmEdgeId(null)}
