@@ -601,8 +601,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
   const [nodeContent, setNodeContent] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
-  const [originalNodeContent, setOriginalNodeContent] = React.useState('');
-  const [originalNodeTitle, setOriginalNodeTitle] = React.useState('');
+  const [originalNodeData, setOriginalNodeData] = React.useState<Map<string, { content: string; title: string }>>(new Map());
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
   const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
@@ -650,15 +649,23 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
   // Update content when selected node changes
   React.useEffect(() => {
-    if (!graph) return;
+    if (!graph || !selectedNodeId) return;
     const sel = graph.nodes.find((n: any) => n._id === selectedNodeId);
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
 
-    // Store original values for change detection
-    setOriginalNodeContent(sel?.content ?? '');
-    setOriginalNodeTitle(sel?.title ?? '');
-  }, [graph, selectedNodeId]);
+    // Store original values for change detection (only if not already stored)
+    if (!originalNodeData.has(selectedNodeId)) {
+      setOriginalNodeData(prev => {
+        const updated = new Map(prev);
+        updated.set(selectedNodeId, {
+          content: sel?.content ?? '',
+          title: sel?.title ?? ''
+        });
+        return updated;
+      });
+    }
+  }, [graph, selectedNodeId, originalNodeData]);
 
   // Ref for scrolling to the Add Scene section
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
@@ -668,7 +675,42 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = () => {
-    return nodeContent !== originalNodeContent || nodeTitle !== originalNodeTitle;
+    if (!selectedNodeId) return false;
+    const original = originalNodeData.get(selectedNodeId);
+    if (!original) return false;
+    return nodeContent !== original.content || nodeTitle !== original.title;
+  };
+
+  // Check if we can switch nodes (handle unsaved changes)
+  const handleNodeSwitch = (newNodeId: Id<'nodes'>) => {
+    if (hasUnsavedChanges()) {
+      const confirmSwitch = window.confirm(
+        'You have unsaved changes. Do you want to save them before switching scenes?'
+      );
+      if (confirmSwitch) {
+        // Save current node then switch
+        if (selectedNodeId) {
+          updateNode({ nodeId: selectedNodeId, content: nodeContent })
+            .then(() => updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle }))
+            .then(() => {
+              // Update original data after save
+              setOriginalNodeData(prev => {
+                const updated = new Map(prev);
+                updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
+                return updated;
+              });
+              setSelectedNodeId(newNodeId);
+            })
+            .catch(error => console.error('Failed to save changes:', error));
+        }
+      } else {
+        // Discard changes and switch
+        setSelectedNodeId(newNodeId);
+      }
+    } else {
+      // No unsaved changes, switch directly
+      setSelectedNodeId(newNodeId);
+    }
   };
 
   // Handle close with unsaved changes check
@@ -682,13 +724,22 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
   // Save current node and close
   const handleSaveAndClose = async () => {
-    if (!selectedNodeId) return;
+    if (!selectedNodeId) {
+      // No node selected, just close
+      setShowCloseWarning(false);
+      onClose();
+      return;
+    }
 
     try {
       await updateNode({ nodeId: selectedNodeId, content: nodeContent });
       await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
-      setOriginalNodeContent(nodeContent);
-      setOriginalNodeTitle(nodeTitle);
+      // Update original data after save
+      setOriginalNodeData(prev => {
+        const updated = new Map(prev);
+        updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
+        return updated;
+      });
       setShowCloseWarning(false);
       onClose();
     } catch (error) {
@@ -819,7 +870,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                             ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700 shadow-sm'
                             : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800'
                         }`}
-                        onClick={() => setSelectedNodeId(n._id)}
+                        onClick={() => handleNodeSwitch(n._id)}
                       >
                         <div className="flex items-center gap-1.5">
                           <div className="font-medium truncate text-slate-800 dark:text-white flex-1">{n.title}</div>
@@ -856,8 +907,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   onClick={() => {
                     void (async () => {
                       if (!selectedNodeId) return;
-                      await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
-                      setOriginalNodeTitle(nodeTitle);
+                      try {
+                        await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
+                        setOriginalNodeData(prev => {
+                          const updated = new Map(prev);
+                          const current = updated.get(selectedNodeId) || { content: nodeContent, title: '' };
+                          updated.set(selectedNodeId, { ...current, title: nodeTitle });
+                          return updated;
+                        });
+                      } catch (error) {
+                        console.error("Failed to save node title:", error);
+                      }
                     })();
                   }}
                 >
@@ -905,8 +965,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   onClick={() => {
                     void (async () => {
                       if (!selectedNodeId) return;
-                      await updateNode({ nodeId: selectedNodeId, content: nodeContent });
-                      setOriginalNodeContent(nodeContent);
+                      try {
+                        await updateNode({ nodeId: selectedNodeId, content: nodeContent });
+                        setOriginalNodeData(prev => {
+                          const updated = new Map(prev);
+                          const current = updated.get(selectedNodeId) || { content: '', title: nodeTitle };
+                          updated.set(selectedNodeId, { ...current, content: nodeContent });
+                          return updated;
+                        });
+                      } catch (error) {
+                        console.error("Failed to save scene content:", error);
+                      }
                     })();
                   }}
                   variant="blue"
@@ -974,7 +1043,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                       <div
                         key={e._id}
                         className="flex items-start justify-between rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm transition-all cursor-pointer"
-                        onClick={() => setSelectedNodeId(e.toNodeId)}
+                        onClick={() => handleNodeSwitch(e.toNodeId)}
                       >
                         <div className="flex-1 min-w-0 pr-3">
                           <div className="font-medium text-sm text-slate-800 dark:text-white">{e.label}</div>
