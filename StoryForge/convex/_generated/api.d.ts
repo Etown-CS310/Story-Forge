@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as ai from "../ai.js";
 import type * as debug from "../debug.js";
+import type * as image from "../image.js";
 import type * as myFunctions from "../myFunctions.js";
 import type * as queries_stories from "../queries/stories.js";
 import type * as queries_visualization from "../queries/visualization.js";
@@ -32,6 +33,7 @@ import type * as ui from "../ui.js";
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   debug: typeof debug;
+  image: typeof image;
   myFunctions: typeof myFunctions;
   "queries/stories": typeof queries_stories;
   "queries/visualization": typeof queries_visualization;

@@ -125,16 +125,30 @@ function MessageList({ messages }: { messages: any[] }) {
     <div className="space-y-3">
       {messages.map((m) => (
         <React.Fragment key={m._id + '-frag'}>
-          {m.edgeContent && <MessageBubble key={m._id + '-edge'} role="user" content={m.edgeContent} />}
-          <MessageBubble key={m._id + '-msg'} role={m.role} author={m.author} content={m.content} />
+          {m.edgeContent && (
+            <div className="flex justify-end">
+              <div className="max-w-[75%] rounded-2xl px-4 py-3 shadow-sm transition-all bg-blue-600 text-white">
+                <div className="text-[10px] mb-1.5 font-medium text-blue-100">user</div>
+                <div className="whitespace-pre-wrap leading-relaxed text-[15px]">{m.edgeContent}</div>
+              </div>
+            </div>
+          )}
+          <MessageWithImage key={m._id + '-msg'} message={m} />
         </React.Fragment>
       ))}
     </div>
   );
 }
 
-function MessageBubble({ role, author, content }: { role: string; author?: string; content: string }) {
-  const isUser = role === 'user';
+function MessageWithImage({ message }: { message: any }) {
+  // Query for image if this message has a nodeId
+  const imageUrl = useQuery(
+    api.image.getNodeImageUrl,
+    message.nodeId ? { nodeId: message.nodeId } : 'skip'
+  );
+
+  const isUser = message.role === 'user';
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -147,9 +161,21 @@ function MessageBubble({ role, author, content }: { role: string; author?: strin
         <div
           className={`text-[10px] mb-1.5 font-medium ${isUser ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}
         >
-          {author ?? role}
+          {message.author ?? message.role}
         </div>
-        <div className="whitespace-pre-wrap leading-relaxed text-[15px]">{content}</div>
+
+        {/* Display image if available - with reduced max height to ensure text visibility */}
+        {imageUrl && (
+          <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+            <img
+              src={imageUrl}
+              alt="Scene"
+              className="w-full h-auto max-h-32 object-contain bg-slate-100 dark:bg-slate-900"
+            />
+          </div>
+        )}
+
+        <div className="whitespace-pre-wrap leading-relaxed text-[15px]">{message.content}</div>
       </div>
     </div>
   );
