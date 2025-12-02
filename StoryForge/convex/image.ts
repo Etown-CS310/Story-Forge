@@ -28,6 +28,26 @@ export const attachImageToNode = mutation({
       throw new Error('Node not found');
     }
 
+    // Validate uploaded file
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata) {
+      throw new Error('File not found');
+    }
+
+    // Validate file size (10MB max)
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (metadata.size > MAX_SIZE) {
+      // Delete the uploaded file since it's too large
+      await ctx.storage.delete(args.storageId);
+      throw new Error('Image must be smaller than 10MB');
+    }
+
+    // Validate it's an image
+    if (!metadata.contentType?.startsWith('image/')) {
+      await ctx.storage.delete(args.storageId);
+      throw new Error('File must be an image');
+    }
+
     // Delete old image if it exists
     if (node.imageStorageId) {
       await ctx.storage.delete(node.imageStorageId);
