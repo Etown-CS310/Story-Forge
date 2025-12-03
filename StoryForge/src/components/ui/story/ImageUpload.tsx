@@ -1,8 +1,7 @@
 // src/components/ui/story/ImageUpload.tsx
 import React from 'react';
 import { useMutation, useQuery } from 'convex/react';
-import { api } from '@/../convex/_generated/api'; // Ensure this path and structure are correct
-// If `image` is missing, verify the API definition and add the necessary endpoints
+import { api } from '@/../convex/_generated/api';
 import { Id } from '@/../convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Image, Upload, X, Loader2 } from 'lucide-react';
@@ -15,6 +14,7 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const generateUploadUrl = useMutation(api.image.generateUploadUrl);
   const attachImage = useMutation(api.image.attachImageToNode);
   const removeImage = useMutation(api.image.removeImageFromNode);
@@ -61,6 +61,9 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
         nodeId,
         storageId: storageId as Id<'_storage'>,
       });
+      
+      // Clear any previous errors on success
+      setError('');
     } catch (err) {
       console.error('Upload error:', err);
       setError('Failed to upload image. Please try again.');
@@ -76,6 +79,8 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
   const handleRemove = async () => {
     try {
       await removeImage({ nodeId });
+      // Clear any previous errors on success
+      setError('');
     } catch (err) {
       console.error('Remove error:', err);
       setError('Failed to remove image');
@@ -138,21 +143,19 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
                 size="sm"
                 disabled={uploading}
                 className="gap-2 cursor-pointer"
-                asChild
+                type="button"
               >
-                <span>
-                  {uploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      Upload Image
-                    </>
-                  )}
-                </span>
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                  </>
+                )}
               </Button>
             </label>
           </div>

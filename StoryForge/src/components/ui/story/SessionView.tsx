@@ -148,6 +148,14 @@ function MessageWithImage({ message }: { message: any }) {
   );
 
   const isUser = message.role === 'user';
+  
+  // Determine image state:
+  // - undefined = loading (query in progress)
+  // - null = no image exists
+  // - string = image URL available
+  const hasNodeId = !!message.nodeId;
+  const isLoadingImage = hasNodeId && imageUrl === undefined;
+  const hasImage = typeof imageUrl === 'string';
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -164,8 +172,17 @@ function MessageWithImage({ message }: { message: any }) {
           {message.author ?? message.role}
         </div>
 
+        {/* Loading state - show skeleton while image is loading */}
+        {isLoadingImage && (
+          <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
+            <div className="w-full h-32 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-300 dark:border-slate-600 border-t-transparent" />
+            </div>
+          </div>
+        )}
+
         {/* Display image if available - with reduced max height to ensure text visibility */}
-        {imageUrl && (
+        {hasImage && (
           <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
             <img
               src={imageUrl}

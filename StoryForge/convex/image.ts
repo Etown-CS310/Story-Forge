@@ -50,7 +50,12 @@ export const attachImageToNode = mutation({
 
     // Delete old image if it exists
     if (node.imageStorageId) {
-      await ctx.storage.delete(node.imageStorageId);
+        try {
+            await ctx.storage.delete(node.imageStorageId);
+        } catch (err) {
+            // Log the error but continue to clear the reference
+            console.error(`Failed to delete image from storage:`, err);
+        }
     }
 
     // Attach new image
