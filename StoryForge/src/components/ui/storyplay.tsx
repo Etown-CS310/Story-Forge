@@ -110,6 +110,11 @@ export default function StoryPlay() {
                     if (editingStoryId === id) {
                       setEditingStoryId(null);
                     }
+                    const activeSession = mySessions?.find((s) => s._id === activeSessionId);
+                    if (activeSession && activeSession.storyId === id) {
+                      setActiveSessionId(null);
+                    }
+
                     await deleteStory({ storyId: id });
                   }}
                 />

@@ -382,78 +382,80 @@ export const deleteStory = mutation({
     const user = await me(ctx);
     if (!user) throw new Error('Unauthorized');
 
-    // Load story
     const story = await ctx.db.get(storyId);
     if (!story) throw new Error('Story not found');
 
-    // Authorization: only creator or admin can delete the story
     const isOwner = story.createdBy === user._id;
     const isAdmin = user.roles?.includes('admin');
     if (!isOwner && !isAdmin) {
       throw new Error('You do not have permission to delete this story.');
     }
 
-    // ----- 1. Delete nodes -----
+    //
+    // 1. DELETE NODES (parallel)
+    //
     const nodes = await ctx.db
       .query('nodes')
       .withIndex('by_story', (q) => q.eq('storyId', storyId))
       .collect();
 
-    for (const n of nodes) {
-      await ctx.db.delete(n._id);
-    }
+    await Promise.all(nodes.map((n) => ctx.db.delete(n._id)));
 
-    // ----- 2. Delete edges -----
+    //
+    // 2. DELETE EDGES (parallel)
+    //
     const edges = await ctx.db
       .query('edges')
       .withIndex('by_story_from', (q) => q.eq('storyId', storyId))
       .collect();
 
-    for (const e of edges) {
-      await ctx.db.delete(e._id);
-    }
+    await Promise.all(edges.map((e) => ctx.db.delete(e._id)));
 
-    // ----- 3. Delete sessions -----
+    //
+    // 3. DELETE SESSIONS + their messages (parallel)
+    //
     const sessions = await ctx.db
       .query('sessions')
       .withIndex('by_story', (q) => q.eq('storyId', storyId))
       .collect();
 
-    for (const session of sessions) {
-      // Delete messages in this session
-      const messages = await ctx.db
-        .query('messages')
-        .withIndex('by_session', (q) => q.eq('sessionId', session._id))
-        .collect();
+    // Delete messages for each session in parallel,
+    // then delete the sessions in parallel
+    await Promise.all(
+      sessions.map(async (session) => {
+        const messages = await ctx.db
+          .query('messages')
+          .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+          .collect();
 
-      for (const m of messages) {
-        await ctx.db.delete(m._id);
-      }
+        await Promise.all(messages.map((m) => ctx.db.delete(m._id)));
+        await ctx.db.delete(session._id);
+      }),
+    );
 
-      await ctx.db.delete(session._id);
-    }
-
-    // ----- 4. Delete drafts -----
+    //
+    // 4. DELETE DRAFTS (parallel)
+    //
     const drafts = await ctx.db
       .query('drafts')
       .withIndex('by_story', (q) => q.eq('storyId', storyId))
       .collect();
 
-    for (const d of drafts) {
-      await ctx.db.delete(d._id);
-    }
+    await Promise.all(drafts.map((d) => ctx.db.delete(d._id)));
 
-    // ----- 5. Delete savedSuggestions tied to this story -----
+    //
+    // 5. DELETE savedSuggestions (parallel)
+    //
     const suggestions = await ctx.db
       .query('savedSuggestions')
       .withIndex('by_user_story', (q) => q.eq('userId', user._id).eq('storyId', storyId))
       .collect();
 
-    for (const s of suggestions) {
-      await ctx.db.delete(s._id);
-    }
+    await Promise.all(suggestions.map((s) => ctx.db.delete(s._id)));
 
-    // ----- 6. Finally delete the story itself -----
+    //
+    // 6. DELETE STORY ITSELF
+    //
     await ctx.db.delete(storyId);
 
     return { ok: true };

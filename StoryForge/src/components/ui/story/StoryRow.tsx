@@ -4,6 +4,7 @@ import { api } from '@/../convex/_generated/api';
 import { Id } from '@/../convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
 import { Edit, Play } from 'lucide-react';
+import { ConfirmDeleteDialog } from '@/components/ui/confirmDeleteDialog';
 
 export default function StoryRow({
   story,
@@ -18,6 +19,20 @@ export default function StoryRow({
 }) {
   const create = useMutation(api.ui.startSessionForMe);
   const [creating, setCreating] = React.useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(story._id);
+      setDeleteModalOpen(false);
+    } catch (err) {
+      console.error('Failed to delete story:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 hover:shadow-md bg-white dark:bg-slate-800">
@@ -31,21 +46,18 @@ export default function StoryRow({
       </div>
 
       <div className="flex justify-center gap-2">
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => {
-            void (async () => {
-              try {
-                await onDelete(story._id);
-              } catch (error) {
-                console.error('Failed to delete story:', error);
-              }
-            })();
-          }}
-          className="gap-2"
-        >
-          Delete
+        <ConfirmDeleteDialog
+          open={deleteModalOpen}
+          onOpenChange={setDeleteModalOpen}
+          title="Delete Story"
+          description={`Are you sure you want to delete "${story.title}"? This action cannot be undone.`}
+          confirmLabel="Confirm Delete"
+          loading={deleting}
+          onConfirm={handleDelete}
+        />
+
+        <Button variant="destructive" size="sm" disabled={deleting} onClick={() => setDeleteModalOpen(true)}>
+          {deleting ? 'Deleting...' : 'Delete'}
         </Button>
 
         <Button variant="secondary" size="sm" onClick={() => onEdit(story._id)} className="gap-2">
