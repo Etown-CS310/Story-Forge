@@ -31,6 +31,7 @@ export default function StoryPlay() {
   const [editingStoryId, setEditingStoryId] = React.useState<Id<'stories'> | null>(null);
   const [activeSessionId, setActiveSessionId] = React.useState<Id<'sessions'> | null>(null);
   const rightRef = React.useRef<HTMLDivElement | null>(null);
+  const deleteStory = useMutation(api.ui.deleteStory);
   const ensure = useMutation(api.ui.ensureUser);
   React.useEffect(() => {
     void ensure();
@@ -103,6 +104,18 @@ export default function StoryPlay() {
                   onStart={(sessionId) => {
                     setActiveSessionId(sessionId);
                     setEditingStoryId(null);
+                  }}
+                  onDelete={async (id) => {
+                    // If we're deleting the story we're currently editing, close the editor
+                    if (editingStoryId === id) {
+                      setEditingStoryId(null);
+                    }
+                    const activeSession = mySessions?.find((s) => s._id === activeSessionId);
+                    if (activeSession && activeSession.storyId === id) {
+                      setActiveSessionId(null);
+                    }
+
+                    await deleteStory({ storyId: id });
                   }}
                 />
               ))}

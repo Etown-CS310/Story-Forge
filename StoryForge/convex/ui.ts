@@ -80,12 +80,12 @@ export const updateNodeTitle = mutation({
 });
 
 export const createNodeAndEdge = mutation({
-  args: { 
-    storyId: v.id('stories'), 
-    fromNodeId: v.id('nodes'), 
-    label: v.string(), 
+  args: {
+    storyId: v.id('stories'),
+    fromNodeId: v.id('nodes'),
+    label: v.string(),
     content: v.string(),
-    title: v.optional(v.string())  // ← Added title parameter
+    title: v.optional(v.string()), // ← Added title parameter
   },
   handler: async (ctx, { storyId, fromNodeId, label, content, title }) => {
     const from = await ctx.db.get(fromNodeId);
@@ -93,7 +93,7 @@ export const createNodeAndEdge = mutation({
     const nodeId = await ctx.db.insert('nodes', {
       storyId,
       role: 'narrator',
-      title: title ?? 'Untitled Scene',  // ← Use provided title or default only when undefined/null
+      title: title ?? 'Untitled Scene', // ← Use provided title or default only when undefined/null
       content,
       metadata: {},
       version: 1,
@@ -375,3 +375,89 @@ export async function getOrCreateUser(ctx: any) {
 
   return await ctx.db.get(userId);
 }
+
+export const deleteStory = mutation({
+  args: { storyId: v.id('stories') },
+  handler: async (ctx, { storyId }) => {
+    const user = await me(ctx);
+    if (!user) throw new Error('Unauthorized');
+
+    const story = await ctx.db.get(storyId);
+    if (!story) throw new Error('Story not found');
+
+    const isOwner = story.createdBy === user._id;
+    const isAdmin = user.roles?.includes('admin');
+    if (!isOwner && !isAdmin) {
+      throw new Error('You do not have permission to delete this story.');
+    }
+
+    //
+    // 1. DELETE NODES (parallel)
+    //
+    const nodes = await ctx.db
+      .query('nodes')
+      .withIndex('by_story', (q) => q.eq('storyId', storyId))
+      .collect();
+
+    await Promise.all(nodes.map((n) => ctx.db.delete(n._id)));
+
+    //
+    // 2. DELETE EDGES (parallel)
+    //
+    const edges = await ctx.db
+      .query('edges')
+      .withIndex('by_story_from', (q) => q.eq('storyId', storyId))
+      .collect();
+
+    await Promise.all(edges.map((e) => ctx.db.delete(e._id)));
+
+    //
+    // 3. DELETE SESSIONS + their messages (parallel)
+    //
+    const sessions = await ctx.db
+      .query('sessions')
+      .withIndex('by_story', (q) => q.eq('storyId', storyId))
+      .collect();
+
+    // Delete messages for each session in parallel,
+    // then delete the sessions in parallel
+    await Promise.all(
+      sessions.map(async (session) => {
+        const messages = await ctx.db
+          .query('messages')
+          .withIndex('by_session', (q) => q.eq('sessionId', session._id))
+          .collect();
+
+        await Promise.all(messages.map((m) => ctx.db.delete(m._id)));
+        await ctx.db.delete(session._id);
+      }),
+    );
+
+    //
+    // 4. DELETE DRAFTS (parallel)
+    //
+    const drafts = await ctx.db
+      .query('drafts')
+      .withIndex('by_story', (q) => q.eq('storyId', storyId))
+      .collect();
+
+    await Promise.all(drafts.map((d) => ctx.db.delete(d._id)));
+
+    //
+    // 5. DELETE savedSuggestions (parallel)
+    //
+    const suggestions = await ctx.db
+      .query('savedSuggestions')
+      .withIndex('by_user_story', (q) => q.eq('userId', user._id).eq('storyId', storyId))
+      .collect();
+
+    await Promise.all(suggestions.map((s) => ctx.db.delete(s._id)));
+
+    //
+    // 6. DELETE STORY ITSELF
+    //
+    await ctx.db.delete(storyId);
+
+    return { ok: true };
+  },
+});
