@@ -19,6 +19,7 @@ import StoryGraphViewer from './StoryGraphViewer';
 import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
 import SavedSuggestionsViewer from './SavedSuggestionsViewer';
+import ImageUpload from './ImageUpload';
 
 // Constants for graph scaling
 const MIN_SCALE_MULTIPLIER = 0.8;
@@ -925,6 +926,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   Save Title
                 </Button>
               </div>
+
+              {selectedNodeId && <ImageUpload nodeId={selectedNodeId} />}
+
               <Textarea
                 rows={8}
                 value={nodeContent}

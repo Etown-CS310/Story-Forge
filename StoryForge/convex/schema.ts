@@ -34,6 +34,8 @@ export default defineSchema({
     role: v.string(), // "system" | "narrator" | "character" | "user" | "ai"
     title: v.optional(v.string()), // short title for authors to identify nodes
     content: v.string(), // rich text or markdown string; keep assets in storage table
+    // optional image for this scene
+    imageStorageId: v.optional(v.id('_storage')),
     // optional metadata to drive UI or AI prompts
     metadata: v.optional(v.any()), // e.g., characterId, mood, variables to set, etc.
     // versioning: if authors revise, write a new node and point edges at it
