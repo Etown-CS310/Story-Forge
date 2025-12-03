@@ -17,6 +17,7 @@ For detailed guides, technical info, and step-by-step instructions, visit our wi
 - [Installation & Setup](https://github.com/Etown-CS310/Story-Forge/wiki/Installation-&-Setup) – How to run the project locally
 - [Technical Stack](https://github.com/Etown-CS310/Story-Forge/wiki/Tech-Stack) – Frontend, backend, and libraries
 - [Project Structure](https://github.com/Etown-CS310/Story-Forge/wiki/Project-Structure) – Directory structure and file organization
+- [API Documentation](https://github.com/Etown-CS310/Story-Forge/wiki/API-Documentation) – Comprehensive API reference with examples and error handling
 - [Our Team](https://github.com/Etown-CS310/Story-Forge/wiki/Meet-Our-Team) - Meet the developers behind Story Forge
 
 ---
