@@ -6,7 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Edit, Link, Plus, Save, Trash2, X, Network, ChevronsDown, ChevronsUp, ChevronDown, ChevronUp, GitBranch } from 'lucide-react';
+import {
+  Edit,
+  Link,
+  Plus,
+  Save,
+  Trash2,
+  X,
+  Network,
+  ChevronsDown,
+  ChevronsUp,
+  ChevronDown,
+  ChevronUp,
+  GitBranch,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +33,7 @@ import AIAssistant from './AIAssistant';
 import { Textarea } from '../textarea';
 import SavedSuggestionsViewer from './SavedSuggestionsViewer';
 import ImageUpload from './ImageUpload';
+import UnsavedChangesDialog from '../UnsavedChangesDialog';
 
 // Constants for graph scaling
 const MIN_SCALE_MULTIPLIER = 0.8;
@@ -29,12 +43,12 @@ const CONTAINER_HEIGHT_PADDING = 0.85;
 const SVG_DIMENSION_TIMEOUT_MS = 500;
 
 // Mini graph component showing current node and immediate children
-function LocalNodeGraph({ 
-  currentNodeId, 
-  nodes, 
-  edges, 
-  isDarkMode 
-}: { 
+function LocalNodeGraph({
+  currentNodeId,
+  nodes,
+  edges,
+  isDarkMode,
+}: {
   currentNodeId: Id<'nodes'> | null;
   nodes: any[];
   edges: any[];
@@ -45,7 +59,7 @@ function LocalNodeGraph({
   const [svgContent, setSvgContent] = React.useState<string>('');
   const [renderState, setRenderState] = React.useState<'loading' | 'success' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = React.useState<string>('');
-  
+
   // Zoom and pan state
   const [scale, setScale] = React.useState(1);
   const [baseScale, setBaseScale] = React.useState(1);
@@ -71,11 +85,11 @@ function LocalNodeGraph({
       try {
         setRenderState('loading');
         setSvgContent('');
-        
+
         const mermaid = (await import('mermaid')).default;
-        
+
         // Initialize mermaid (not async, no await needed)
-        mermaid.initialize({ 
+        mermaid.initialize({
           startOnLoad: false,
           theme: isDarkMode ? 'dark' : 'default',
           flowchart: {
@@ -83,11 +97,11 @@ function LocalNodeGraph({
             padding: 8,
             nodeSpacing: 25,
             rankSpacing: 25,
-          }
+          },
         });
 
         // Find current node
-        const currentNode = nodes.find(n => n._id === currentNodeId);
+        const currentNode = nodes.find((n) => n._id === currentNodeId);
         if (!currentNode) {
           console.error('LocalNodeGraph - current node not found');
           if (isMounted) {
@@ -98,7 +112,7 @@ function LocalNodeGraph({
         }
 
         // Find edges from current node
-        const outgoingEdges = edges.filter(e => e.fromNodeId === currentNodeId);
+        const outgoingEdges = edges.filter((e) => e.fromNodeId === currentNodeId);
 
         if (outgoingEdges.length === 0) {
           if (isMounted) {
@@ -107,17 +121,17 @@ function LocalNodeGraph({
           }
           return;
         }
-        
+
         // Find child nodes
-        const childNodeIds = outgoingEdges.map(e => e.toNodeId);
-        const childNodes = nodes.filter(n => childNodeIds.includes(n._id));
+        const childNodeIds = outgoingEdges.map((e) => e.toNodeId);
+        const childNodes = nodes.filter((n) => childNodeIds.includes(n._id));
 
         // Build mermaid diagram
         let diagram = 'graph TD\n';
-        
+
         // Helper functions
         const sanitizeId = (id: string) => 'n' + id.replace(/[^a-zA-Z0-9]/g, '');
-        const truncate = (text: string, maxLen: number) => 
+        const truncate = (text: string, maxLen: number) =>
           text.length <= maxLen ? text : text.substring(0, maxLen - 3) + '...';
         const escapeMermaidText = (text: string) => {
           return text
@@ -142,16 +156,14 @@ function LocalNodeGraph({
         // Add current node (highlighted)
         const currentNodeId_safe = sanitizeId(currentNode._id);
         const currentNodeText = escapeMermaidText(
-          currentNode.title ? truncate(currentNode.title, 40) : truncate(currentNode.content, 40)
+          currentNode.title ? truncate(currentNode.title, 40) : truncate(currentNode.content, 40),
         );
         diagram += `  ${currentNodeId_safe}[["📍 ${currentNodeText}"]]\n`;
 
         // Add child nodes
         for (const child of childNodes) {
           const childId = sanitizeId(child._id);
-          const childText = escapeMermaidText(
-            child.title ? truncate(child.title, 40) : truncate(child.content, 40)
-          );
+          const childText = escapeMermaidText(child.title ? truncate(child.title, 40) : truncate(child.content, 40));
           diagram += `  ${childId}["${childText}"]\n`;
         }
 
@@ -162,11 +174,11 @@ function LocalNodeGraph({
           const fromId = sanitizeId(edge.fromNodeId);
           const toId = sanitizeId(edge.toNodeId);
           const label = escapeMermaidText(truncate(edge.label, 30));
-          
+
           let suffix = '';
           if (edge.conditions) suffix += ' 🔒';
           if (edge.effects) suffix += ' ⚡';
-          
+
           diagram += `  ${fromId} -->|"${label}${suffix}"| ${toId}\n`;
         }
 
@@ -179,45 +191,45 @@ function LocalNodeGraph({
 
         const uniqueId = 'mermaid-mini-' + currentNodeId.replace(/[^a-zA-Z0-9]/g, '') + '-' + Date.now();
         const { svg } = await mermaid.render(uniqueId, diagram);
-        
+
         // Add inline styles to the SVG
         const styledSvg = svg.replace(
           '<svg',
-          '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;"'
+          '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;"',
         );
-        
+
         if (isMounted) {
           setSvgContent(styledSvg);
           setRenderState('success');
         }
-        
+
         // Auto-fit after render - wait for SVG to have proper dimensions
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             // Handle async code with proper error handling
             (async () => {
               if (!isMounted || !containerRef.current || !svgWrapperRef.current) return;
-              
+
               const svgElement = svgWrapperRef.current.querySelector('svg');
               if (!svgElement) return;
-              
+
               // Wait for the SVG to have non-zero dimensions (max timeout)
               const start = performance.now();
-              await new Promise<void>(resolve => {
+              await new Promise<void>((resolve) => {
                 let resolved = false;
-                
+
                 function check() {
                   if (resolved || !isMounted) return;
-                  
+
                   if (!svgElement || !containerRef.current) {
                     resolved = true;
                     resolve();
                     return;
                   }
-                  
+
                   // Force a reflow to ensure we get accurate dimensions
                   const rect = svgElement.getBoundingClientRect();
-                  
+
                   if (rect.width > 0 && rect.height > 0) {
                     resolved = true;
                     resolve();
@@ -229,17 +241,17 @@ function LocalNodeGraph({
                     requestAnimationFrame(check);
                   }
                 }
-                
+
                 check();
               });
-              
+
               // Check if still mounted before setting state
               if (!isMounted) return;
-              
+
               // Now calculate the fit
               const svgRect = svgElement.getBoundingClientRect();
               const containerRect = containerRef.current.getBoundingClientRect();
-              
+
               // Calculate scale to fit with padding multipliers
               let fitScale = 1;
               if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
@@ -250,13 +262,13 @@ function LocalNodeGraph({
                 // Clamp between min and max scale multipliers
                 fitScale = Math.max(MIN_SCALE_MULTIPLIER, Math.min(fitScale, MAX_SCALE_MULTIPLIER));
               }
-              
+
               // Center the content
               const scaledWidth = svgRect.width * fitScale;
               const scaledHeight = svgRect.height * fitScale;
               const centerX = (containerRect.width - scaledWidth) / 2;
               const centerY = (containerRect.height - scaledHeight) / 2;
-              
+
               // Only set state if still mounted
               if (isMounted) {
                 setBaseScale(fitScale);
@@ -296,9 +308,9 @@ function LocalNodeGraph({
     const handleNativeWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const delta = e.deltaY * -0.001;
-      setScale(prevScale => {
+      setScale((prevScale) => {
         const safeBaseScale = baseScale > 0 ? baseScale : 1;
         const minZoom = Math.max(0.1, safeBaseScale * 0.1);
         const maxZoom = safeBaseScale * MAX_SCALE_MULTIPLIER;
@@ -319,14 +331,14 @@ function LocalNodeGraph({
 
   const zoomIn = React.useCallback(() => {
     if (baseScale > 0) {
-      setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * MAX_SCALE_MULTIPLIER));
+      setScale((prevScale) => Math.min(prevScale + baseScale * 0.1, baseScale * MAX_SCALE_MULTIPLIER));
     }
   }, [baseScale]);
-  
+
   const zoomOut = React.useCallback(() => {
     if (baseScale > 0) {
       const minZoom = Math.max(0.1, baseScale * 0.1);
-      setScale(prevScale => Math.max(prevScale - baseScale * 0.1, minZoom));
+      setScale((prevScale) => Math.max(prevScale - baseScale * 0.1, minZoom));
     }
   }, [baseScale]);
 
@@ -341,19 +353,19 @@ function LocalNodeGraph({
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x, y: pos.y + panStep }));
+          setPosition((pos) => ({ x: pos.x, y: pos.y + panStep }));
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x, y: pos.y - panStep }));
+          setPosition((pos) => ({ x: pos.x, y: pos.y - panStep }));
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x + panStep, y: pos.y }));
+          setPosition((pos) => ({ x: pos.x + panStep, y: pos.y }));
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x - panStep, y: pos.y }));
+          setPosition((pos) => ({ x: pos.x - panStep, y: pos.y }));
           break;
         case '+':
         case '=':
@@ -398,7 +410,7 @@ function LocalNodeGraph({
     setIsDragging(false);
     setIsHovering(false);
   };
-  
+
   const handleMouseEnter = () => {
     setIsHovering(true);
   };
@@ -553,14 +565,12 @@ function LocalNodeGraph({
       </div>
 
       {/* Interactive graph container */}
-      <div 
+      <div
         ref={containerRef}
         className={`bg-slate-50 dark:bg-slate-900/50 rounded-lg border-2 transition-colors ${
-          isHovering 
-            ? 'border-blue-400 dark:border-blue-600' 
-            : 'border-slate-200 dark:border-slate-700'
+          isHovering ? 'border-blue-400 dark:border-blue-600' : 'border-slate-200 dark:border-slate-700'
         } p-4 relative focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400`}
-        style={{ 
+        style={{
           height: '400px',
           cursor: isDragging ? 'grabbing' : 'grab',
           overflow: 'hidden',
@@ -575,7 +585,7 @@ function LocalNodeGraph({
         role="img"
         aria-label="Interactive story graph showing current scene and available paths"
       >
-        <div 
+        <div
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transformOrigin: 'top left',
@@ -594,7 +604,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const graph = useQuery(api.ui.getStoryGraph, { storyId });
   const createNodeAndEdge = useMutation(api.ui.createNodeAndEdge);
   const updateNode = useMutation(api.ui.updateNodeContent);
-  const updateNodeTitle = useMutation(api.ui.updateNodeTitle);
   const createEdge = useMutation(api.ui.createEdge);
   const deleteEdge = useMutation(api.ui.deleteEdge);
 
@@ -602,7 +611,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
   const [nodeContent, setNodeContent] = React.useState('');
   const [nodeTitle, setNodeTitle] = React.useState('');
-  const [originalNodeData, setOriginalNodeData] = React.useState<Map<string, { content: string; title: string }>>(new Map());
+  const [originalNodeData, setOriginalNodeData] = React.useState<Map<string, { content: string; title: string }>>(
+    new Map(),
+  );
   const [newChoiceLabel, setNewChoiceLabel] = React.useState('');
   const [newSceneTitle, setNewSceneTitle] = React.useState('');
   const [newNodeContent, setNewNodeContent] = React.useState('');
@@ -610,9 +621,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [savedSuggestionsOpen, setSavedSuggestionsOpen] = React.useState(false);
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [deleteConfirmEdgeId, setDeleteConfirmEdgeId] = React.useState<Id<'edges'> | null>(null);
-  const [showCloseWarning, setShowCloseWarning] = React.useState(false);
   const [isPathsExpanded, setIsPathsExpanded] = React.useState(true);
-  
+  const [pendingNodeId, setPendingNodeId] = React.useState<Id<'nodes'> | null>(null);
+  const [showUnsavedDialog, setShowUnsavedDialog] = React.useState(false);
+
   // Set initial dark mode state on client side
   React.useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -625,12 +637,12 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     const observer = new MutationObserver(() => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     });
-    
+
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ['class'],
     });
-    
+
     return () => observer.disconnect();
   }, []);
 
@@ -657,11 +669,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
     // Store original values for change detection (only if not already stored)
     if (!originalNodeData.has(selectedNodeId)) {
-      setOriginalNodeData(prev => {
+      setOriginalNodeData((prev) => {
         const updated = new Map(prev);
         updated.set(selectedNodeId, {
           content: sel?.content ?? '',
-          title: sel?.title ?? ''
+          title: sel?.title ?? '',
         });
         return updated;
       });
@@ -685,31 +697,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Check if we can switch nodes (handle unsaved changes)
   const handleNodeSwitch = (newNodeId: Id<'nodes'>) => {
     if (hasUnsavedChanges()) {
-      const confirmSwitch = window.confirm(
-        'You have unsaved changes. Do you want to save them before switching scenes?'
-      );
-      if (confirmSwitch) {
-        // Save current node then switch
-        if (selectedNodeId) {
-          updateNode({ nodeId: selectedNodeId, content: nodeContent })
-            .then(() => updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle }))
-            .then(() => {
-              // Update original data after save
-              setOriginalNodeData(prev => {
-                const updated = new Map(prev);
-                updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
-                return updated;
-              });
-              setSelectedNodeId(newNodeId);
-            })
-            .catch(error => console.error('Failed to save changes:', error));
-        }
-      } else {
-        // Discard changes and switch
-        setSelectedNodeId(newNodeId);
-      }
+      setPendingNodeId(newNodeId);
+      setShowUnsavedDialog(true);
     } else {
-      // No unsaved changes, switch directly
       setSelectedNodeId(newNodeId);
     }
   };
@@ -717,41 +707,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Handle close with unsaved changes check
   const handleClose = () => {
     if (hasUnsavedChanges()) {
-      setShowCloseWarning(true);
+      setShowUnsavedDialog(true);
     } else {
       onClose();
     }
-  };
-
-  // Save current node and close
-  const handleSaveAndClose = async () => {
-    if (!selectedNodeId) {
-      // No node selected, just close
-      setShowCloseWarning(false);
-      onClose();
-      return;
-    }
-
-    try {
-      await updateNode({ nodeId: selectedNodeId, content: nodeContent });
-      await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
-      // Update original data after save
-      setOriginalNodeData(prev => {
-        const updated = new Map(prev);
-        updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
-        return updated;
-      });
-      setShowCloseWarning(false);
-      onClose();
-    } catch (error) {
-      console.error('Failed to save changes:', error);
-    }
-  };
-
-  // Discard changes and close
-  const handleDiscardAndClose = () => {
-    setShowCloseWarning(false);
-    onClose();
   };
 
   const handleDeleteEdge = async (edgeId: Id<'edges'>) => {
@@ -853,16 +812,16 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               </div>
               <ScrollArea
                 className={`rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ${
-                  isFullHeight ? 'h-[48rem]' : 'h-96'
+                  isFullHeight ? 'h-192' : 'h-96'
                 }`}
               >
                 <div className="space-y-2">
                   {graph.nodes.map((n: any) => {
                     // Check if this node is a child of the selected node
-                    const isChildNode = selectedNodeId && graph.edges.some((e: any) => 
-                      e.fromNodeId === selectedNodeId && e.toNodeId === n._id
-                    );
-                    
+                    const isChildNode =
+                      selectedNodeId &&
+                      graph.edges.some((e: any) => e.fromNodeId === selectedNodeId && e.toNodeId === n._id);
+
                     return (
                       <button
                         key={n._id}
@@ -876,7 +835,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         <div className="flex items-center gap-1.5">
                           <div className="font-medium truncate text-slate-800 dark:text-white flex-1">{n.title}</div>
                           {isChildNode && (
-                            <span className="text-yellow-500 dark:text-yellow-400 flex-shrink-0" title="Direct child of current scene">
+                            <span
+                              className="text-yellow-500 dark:text-yellow-400 shrink-0"
+                              title="Direct child of current scene"
+                            >
                               ⭐
                             </span>
                           )}
@@ -902,38 +864,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     setNodeTitle(e.target.value);
                   }}
                 />
-                <Button
-                  variant="blue"
-                  className="gap-2"
-                  onClick={() => {
-                    void (async () => {
-                      if (!selectedNodeId) return;
-                      try {
-                        await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
-                        setOriginalNodeData(prev => {
-                          const updated = new Map(prev);
-                          const current = updated.get(selectedNodeId) || { content: nodeContent, title: '' };
-                          updated.set(selectedNodeId, { ...current, title: nodeTitle });
-                          return updated;
-                        });
-                      } catch (error) {
-                        console.error("Failed to save node title:", error);
-                      }
-                    })();
-                  }}
-                >
-                  <Save className="w-4 h-4" />
-                  Save Title
-                </Button>
               </div>
 
               {selectedNodeId && <ImageUpload nodeId={selectedNodeId} />}
 
-              <Textarea
-                rows={8}
-                value={nodeContent}
-                onChange={(e) => setNodeContent(e.target.value)}
-              />
+              <Textarea rows={8} value={nodeContent} onChange={(e) => setNodeContent(e.target.value)} />
 
               {/* Add key prop to force remount when selectedNodeId changes */}
               <AIAssistant
@@ -963,22 +898,22 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 }}
                 onOpenSavedViewer={() => setSavedSuggestionsOpen(true)}
               />
-              
+
               <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {
                     void (async () => {
                       if (!selectedNodeId) return;
                       try {
-                        await updateNode({ nodeId: selectedNodeId, content: nodeContent });
-                        setOriginalNodeData(prev => {
+                        await updateNode({ nodeId: selectedNodeId, content: nodeContent, title: nodeTitle });
+                        setOriginalNodeData((prev) => {
                           const updated = new Map(prev);
                           const current = updated.get(selectedNodeId) || { content: '', title: nodeTitle };
-                          updated.set(selectedNodeId, { ...current, content: nodeContent });
+                          updated.set(selectedNodeId, { ...current, content: nodeContent, title: nodeTitle });
                           return updated;
                         });
                       } catch (error) {
-                        console.error("Failed to save scene content:", error);
+                        console.error('Failed to save scene content:', error);
                       }
                     })();
                   }}
@@ -1062,7 +997,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                             event.stopPropagation();
                             setDeleteConfirmEdgeId(e._id);
                           }}
-                          className="flex-shrink-0 gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                          className="shrink-0 gap-2 hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
@@ -1078,7 +1013,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 </div>
 
                 {/* Create new node + edge */}
-                <div ref={addSceneSectionRef} className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
+                <div
+                  ref={addSceneSectionRef}
+                  className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900"
+                >
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Plus className="w-4 h-4" />
                     Add New Scene
@@ -1147,10 +1085,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmEdgeId(null)}
-            >
+            <Button variant="outline" onClick={() => setDeleteConfirmEdgeId(null)}>
               Cancel
             </Button>
             <Button
@@ -1167,37 +1102,47 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
         </DialogContent>
       </Dialog>
 
-      {/* Unsaved Changes Warning Dialog */}
-      <Dialog open={showCloseWarning} onOpenChange={(isOpen: boolean) => !isOpen && setShowCloseWarning(false)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Unsaved Changes</DialogTitle>
-            <DialogDescription>
-              You have unsaved changes to this scene. Do you want to save them before closing?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowCloseWarning(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDiscardAndClose}
-            >
-              Discard Changes
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => { void handleSaveAndClose(); }}
-            >
-              Save and Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UnsavedChangesDialog
+        open={showUnsavedDialog}
+        onSave={async () => {
+          if (!selectedNodeId) return;
+
+          try {
+            await updateNode({
+              nodeId: selectedNodeId,
+              content: nodeContent,
+              title: nodeTitle,
+            });
+
+            // Update local baseline state
+            setOriginalNodeData((prev) => {
+              const updated = new Map(prev);
+              updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
+              return updated;
+            });
+
+            if (pendingNodeId) {
+              setSelectedNodeId(pendingNodeId);
+            }
+          } catch (err) {
+            console.error('Failed saving node', err);
+          }
+
+          setPendingNodeId(null);
+          setShowUnsavedDialog(false);
+        }}
+        onDiscard={() => {
+          if (pendingNodeId) {
+            setSelectedNodeId(pendingNodeId);
+          }
+          setPendingNodeId(null);
+          setShowUnsavedDialog(false);
+        }}
+        onCancel={() => {
+          setPendingNodeId(null);
+          setShowUnsavedDialog(false);
+        }}
+      />
 
       <SavedSuggestionsViewer
         storyId={storyId}

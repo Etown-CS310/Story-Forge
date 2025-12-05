@@ -66,16 +66,13 @@ export const getStoryGraph = query({
 });
 
 export const updateNodeContent = mutation({
-  args: { nodeId: v.id('nodes'), content: v.string() },
-  handler: async (ctx, { nodeId, content }) => {
-    await ctx.db.patch(nodeId, { content });
-  },
-});
-
-export const updateNodeTitle = mutation({
-  args: { nodeId: v.id('nodes'), title: v.string() },
-  handler: async (ctx, { nodeId, title }) => {
-    await ctx.db.patch(nodeId, { title });
+  args: { nodeId: v.id('nodes'), content: v.string(), title: v.optional(v.string()) },
+  handler: async (ctx, { nodeId, content, title }) => {
+    const updateData: any = { content };
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+    await ctx.db.patch(nodeId, updateData);
   },
 });
 

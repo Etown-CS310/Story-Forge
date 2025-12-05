@@ -7,7 +7,7 @@ import { TooltipProvider } from './components/ui/tooltip';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm">
         <div className="max-w-7xl mx-auto flex flex-row justify-between items-center">
           <div className="flex items-center gap-3">
@@ -26,7 +26,7 @@ export default function App() {
       <main className="px-8 py-16">
         <div className="max-w-none mx-auto">
           <div className="text-center mb-16">
-            <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 pb-2">
+            <h1 className="text-6xl font-bold bg-linear-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 pb-2">
               Story Forge
             </h1>
             <p className="text-slate-600 dark:text-slate-400 text-lg">Craft your narrative, shape your adventure</p>
@@ -43,7 +43,7 @@ export default function App() {
           <Unauthenticated>
             <div className="max-w-md mx-auto">
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-10 text-center">
-                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
