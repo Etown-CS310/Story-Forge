@@ -18,6 +18,20 @@ export default function SessionView({
   const choose = useMutation(api.ui.chooseEdge);
   const advance = useMutation(api.ui.advanceSession);
 
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!data?.messages) return;
+
+    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+    if (viewport) {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [data?.messages]);
+
   // Auto-play: repeatedly advance the session by picking the first available choice
   const [autoPlay, setAutoPlay] = React.useState(false);
   React.useEffect(() => {
@@ -71,7 +85,10 @@ export default function SessionView({
           </div>
         </CardHeader>
         <CardContent className="pt-4">
-          <ScrollArea className="h-80 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900">
+          <ScrollArea
+            ref={scrollRef}
+            className="h-145 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900"
+          >
             <MessageList messages={data.messages} />
           </ScrollArea>
         </CardContent>
@@ -95,7 +112,11 @@ export default function SessionView({
         <CardContent className="pt-4">
           {data.choices.length === 0 ? (
             <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-              No choices at this step.
+              Well Done Story Complete
+              <br />
+              No more choices after this scene.
+              <br />
+              <Button onClick={() => closeActiveSession(null)}>Close session</Button>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -142,13 +163,10 @@ function MessageList({ messages }: { messages: any[] }) {
 
 function MessageWithImage({ message }: { message: any }) {
   // Query for image if this message has a nodeId
-  const imageUrl = useQuery(
-    api.image.getNodeImageUrl,
-    message.nodeId ? { nodeId: message.nodeId } : 'skip'
-  );
+  const imageUrl = useQuery(api.image.getNodeImageUrl, message.nodeId ? { nodeId: message.nodeId } : 'skip');
 
   const isUser = message.role === 'user';
-  
+
   // Determine image state:
   // - undefined = loading (query in progress)
   // - null = no image exists

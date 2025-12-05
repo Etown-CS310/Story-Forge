@@ -37,9 +37,9 @@ export default function StoryRow({
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200 hover:shadow-md bg-white dark:bg-slate-800">
       <div className="mb-3">
-        <div className="font-semibold text-slate-800 dark:text-white text-center">{story.title}</div>
+        <div className="font-semibold text-slate-800 dark:text-white text-center line-clamp-1">{story.title}</div>
         {story.summary && (
-          <div className="text-sm text-slate-600 dark:text-slate-400 text-center line-clamp-2 mt-1">
+          <div className="text-sm text-slate-600 dark:text-slate-400 text-center line-clamp-1 mt-1">
             {story.summary}
           </div>
         )}
