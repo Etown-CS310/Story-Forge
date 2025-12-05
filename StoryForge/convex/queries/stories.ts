@@ -104,3 +104,13 @@ export const sendUserMessage = mutation({
     });
   },
 });
+
+export const changeStoryTitle = mutation({
+  args: { storyId: v.id('stories'), newTitle: v.string() },
+  handler: async (ctx, { storyId, newTitle }) => {
+    const story = await ctx.db.get(storyId);
+    if (!story) throw new Error('Story not found');
+
+    await ctx.db.patch(storyId, { title: newTitle });
+  },
+});

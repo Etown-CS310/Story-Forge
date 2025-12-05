@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Id } from '@/../convex/_generated/dataModel';
+import { Input } from '../input';
+import { Button } from '../button';
 
 interface StoryGraphViewerProps {
   storyId: Id<'stories'>;
@@ -22,32 +24,40 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   const [isEditingZoom, setIsEditingZoom] = useState(false);
   const [zoomInput, setZoomInput] = useState('100');
   const [hasAutoFitted, setHasAutoFitted] = useState(false);
-  
+  const [StoryTitle, setStoryTitle] = useState('');
+
+  const changeStoryTitle = useMutation(api.queries.stories.changeStoryTitle);
+
   const [isHovering, setIsHovering] = useState(false);
-  
+
   // Track dark mode in state so it triggers re-render
-  const [isDarkMode, setIsDarkMode] = useState(
-    document.documentElement.classList.contains('dark')
-  );
-  
+  const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
+
   // Watch for dark mode changes
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     });
-    
+
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
+      attributeFilter: ['class'],
     });
-    
+
     return () => observer.disconnect();
   }, []);
-  
-  const data = useQuery(api.queries.visualization.getStoryMermaid, { 
+
+  const data = useQuery(api.queries.visualization.getStoryMermaid, {
     storyId,
-    isDarkMode 
+    isDarkMode,
   });
+
+  useEffect(() => {
+    // Set initial Title
+    if (data && data.title) {
+      setStoryTitle(data.title);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!data || !mermaidRef.current) return;
@@ -56,57 +66,59 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       try {
         setLoading(true);
         const mermaid = (await import('mermaid')).default;
-        
-        mermaid.initialize({ 
+
+        mermaid.initialize({
           startOnLoad: false,
           theme: isDarkMode ? 'dark' : 'default',
-          themeVariables: isDarkMode ? {
-            // Dark mode specific colors for better visibility
-            primaryColor: '#1e293b',
-            primaryTextColor: '#e2e8f0',
-            primaryBorderColor: '#475569',
-            lineColor: '#94a3b8',
-            secondaryColor: '#334155',
-            tertiaryColor: '#0f172a',
-            background: '#0f172a',
-            mainBkg: '#1e293b',
-            secondBkg: '#334155',
-            edgeLabelBackground: '#1e293b',
-            nodeBorder: '#64748b',
-            clusterBkg: '#1e293b',
-            clusterBorder: '#475569',
-            defaultLinkColor: '#94a3b8',
-            titleColor: '#e2e8f0',
-            nodeTextColor: '#e2e8f0',
-          } : {},
+          themeVariables: isDarkMode
+            ? {
+                // Dark mode specific colors for better visibility
+                primaryColor: '#1e293b',
+                primaryTextColor: '#e2e8f0',
+                primaryBorderColor: '#475569',
+                lineColor: '#94a3b8',
+                secondaryColor: '#334155',
+                tertiaryColor: '#0f172a',
+                background: '#0f172a',
+                mainBkg: '#1e293b',
+                secondBkg: '#334155',
+                edgeLabelBackground: '#1e293b',
+                nodeBorder: '#64748b',
+                clusterBkg: '#1e293b',
+                clusterBorder: '#475569',
+                defaultLinkColor: '#94a3b8',
+                titleColor: '#e2e8f0',
+                nodeTextColor: '#e2e8f0',
+              }
+            : {},
           flowchart: {
             curve: 'basis',
             padding: 20,
             nodeSpacing: 50,
             rankSpacing: 50,
-          }
+          },
         });
 
         const { svg } = await mermaid.render('mermaid-graph', data.mermaid);
         if (mermaidRef.current) {
           mermaidRef.current.innerHTML = svg;
-          
+
           // Wait for the browser to fully render and layout the SVG by polling for non-zero dimensions (max 500ms)
           const svgElement = mermaidRef.current.querySelector('svg');
           if (svgElement) {
             const start = performance.now();
-            await new Promise(resolve => {
+            await new Promise((resolve) => {
               let resolved = false;
-              
+
               function check() {
                 if (resolved) return; // Stop if already resolved
-                
+
                 if (!svgElement) {
                   resolved = true;
                   resolve(undefined);
                   return;
                 }
-                
+
                 const rect = svgElement.getBoundingClientRect();
                 if (rect.width > 0 && rect.height > 0) {
                   resolved = true;
@@ -119,41 +131,41 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
                   requestAnimationFrame(check);
                 }
               }
-              
+
               check();
             });
           }
-          
+
           // Auto-fit on first render or after theme change
           if (!hasAutoFitted && containerRef.current) {
             const svgElement = mermaidRef.current.querySelector('svg');
             if (svgElement) {
               // Force a reflow to ensure we get accurate dimensions
               svgElement.getBoundingClientRect();
-              
+
               const svgRect = svgElement.getBoundingClientRect();
               const containerRect = containerRef.current.getBoundingClientRect();
-              
+
               // Calculate scale to fit (with some padding)
               let fitScale = 1;
               if (svgRect.width > 0 && svgRect.height > 0 && containerRect.width > 0 && containerRect.height > 0) {
                 const scaleX = (containerRect.width * 0.9) / svgRect.width;
                 const scaleY = (containerRect.height * 0.9) / svgRect.height;
                 fitScale = Math.min(scaleX, scaleY, 3);
-                
+
                 // Ensure minimum scale
                 fitScale = Math.max(fitScale, 0.1);
               }
-              
+
               // Center the content properly
               // We need to account for the SVG's original position before scaling
               const scaledWidth = svgRect.width * fitScale;
               const scaledHeight = svgRect.height * fitScale;
-              
+
               // Center based on the container's dimensions
               const centerX = (containerRect.width - scaledWidth) / 2;
               const centerY = (containerRect.height - scaledHeight) / 2;
-              
+
               setBaseScale(fitScale); // This becomes our "100%"
               setScale(fitScale);
               const centeredPosition = { x: centerX, y: centerY };
@@ -183,10 +195,10 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       // Always prevent default scroll when wheel event is on the container
       e.preventDefault();
       e.stopPropagation();
-      
+
       // Handle zoom directly here
       const delta = e.deltaY * -0.001;
-      setScale(prevScale => {
+      setScale((prevScale) => {
         const safeBaseScale = baseScale > 0 ? baseScale : 1;
         const minZoom = Math.max(0.1, safeBaseScale * 0.1); // Ensure reasonable minimum
         const maxZoom = safeBaseScale * 3;
@@ -213,14 +225,14 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   // Zoom in/out buttons (relative to baseScale)
   const zoomIn = useCallback(() => {
     if (baseScale > 0) {
-      setScale(prevScale => Math.min(prevScale + baseScale * 0.1, baseScale * 3)); // Max 300%
+      setScale((prevScale) => Math.min(prevScale + baseScale * 0.1, baseScale * 3)); // Max 300%
     }
   }, [baseScale]);
-  
+
   const zoomOut = useCallback(() => {
     if (baseScale > 0) {
       const minZoom = Math.max(0.1, baseScale * 0.1); // Ensure reasonable minimum
-      setScale(prevScale => Math.max(prevScale - baseScale * 0.1, minZoom)); // Min 10% or 0.1, whichever is larger
+      setScale((prevScale) => Math.max(prevScale - baseScale * 0.1, minZoom)); // Min 10% or 0.1, whichever is larger
     }
   }, [baseScale]);
 
@@ -235,19 +247,19 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x, y: pos.y + panStep }));
+          setPosition((pos) => ({ x: pos.x, y: pos.y + panStep }));
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x, y: pos.y - panStep }));
+          setPosition((pos) => ({ x: pos.x, y: pos.y - panStep }));
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x + panStep, y: pos.y }));
+          setPosition((pos) => ({ x: pos.x + panStep, y: pos.y }));
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setPosition(pos => ({ x: pos.x - panStep, y: pos.y }));
+          setPosition((pos) => ({ x: pos.x - panStep, y: pos.y }));
           break;
         case '+':
         case '=':
@@ -295,7 +307,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     setIsDragging(false);
     setIsHovering(false);
   };
-  
+
   const handleMouseEnter = () => {
     setIsHovering(true);
   };
@@ -349,7 +361,8 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
 
   const copyToClipboard = () => {
     if (data) {
-      navigator.clipboard.writeText(data.mermaid)
+      navigator.clipboard
+        .writeText(data.mermaid)
         .then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
@@ -364,12 +377,10 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   const downloadSVG = async () => {
     const currentSvg = mermaidRef.current?.querySelector('svg');
     if (!currentSvg || !data) return;
-    
+
     // Helper function to download SVG
     const downloadSvgBlob = (svgContent: string | SVGSVGElement, filename: string) => {
-      const svgData = typeof svgContent === 'string' 
-        ? svgContent 
-        : new XMLSerializer().serializeToString(svgContent);
+      const svgData = typeof svgContent === 'string' ? svgContent : new XMLSerializer().serializeToString(svgContent);
       const blob = new Blob([svgData], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -378,16 +389,16 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
       link.click();
       URL.revokeObjectURL(url);
     };
-    
+
     const filename = `${data.title.replace(/\s+/g, '-')}-graph.svg`;
-    
+
     // If we're in dark mode, temporarily render light mode version for download
     if (isDarkMode) {
       try {
         const mermaid = (await import('mermaid')).default;
-        
+
         // Initialize with light theme
-        mermaid.initialize({ 
+        mermaid.initialize({
           startOnLoad: false,
           theme: 'default',
           flowchart: {
@@ -395,13 +406,13 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             padding: 20,
             nodeSpacing: 50,
             rankSpacing: 50,
-          }
+          },
         });
-        
+
         // Render light mode version
         const uniqueId = 'mermaid-download-' + Date.now();
         const { svg: lightSvg } = await mermaid.render(uniqueId, data.mermaid);
-        
+
         // Download the light version
         downloadSvgBlob(lightSvg, filename);
       } catch (err) {
@@ -427,13 +438,34 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-            {data.title}
-          </h2>
+          <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-1">
+            <Input
+              className="w-full min-w-120 rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              value={StoryTitle}
+              onChange={(e) => setStoryTitle(e.target.value)}
+            />
+            <Button
+              variant="default"
+              size="sm"
+              className="ml-4"
+              onClick={() => {
+                void (async () => {
+                  await changeStoryTitle({ storyId, newTitle: StoryTitle });
+                })();
+              }}
+            >
+              Save Title
+            </Button>
+          </div>
           <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               {data.nodeCount} Scenes
             </span>
@@ -455,7 +487,11 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           </button>
 
           <button
-            onClick={() => { void downloadSVG().catch((err) => { console.error('Failed to download SVG:', err); }); }}
+            onClick={() => {
+              void downloadSVG().catch((err) => {
+                console.error('Failed to download SVG:', err);
+              });
+            }}
             className="px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2"
           >
             ⬇️ Download
@@ -483,13 +519,13 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             autoFocus
             min="10"
             max="300"
-            className="w-[80px] px-3 py-2 text-sm text-center border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-20 px-3 py-2 text-sm text-center border-2 border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             aria-label="Zoom percentage input"
           />
         ) : (
           <button
             onClick={handleZoomClick}
-            className="min-w-[80px] px-3 py-2 text-sm text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-600"
+            className="min-w-20 px-3 py-2 text-sm text-center font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-300 dark:border-slate-600"
             title="Click to enter zoom level"
             aria-label="Current zoom level, click to edit"
           >
@@ -517,14 +553,12 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
         </span>
       </div>
 
-      <div 
+      <div
         ref={containerRef}
         className={`bg-white dark:bg-slate-800 rounded-lg border-2 transition-colors ${
-          isHovering 
-            ? 'border-purple-400 dark:border-purple-600' 
-            : 'border-slate-200 dark:border-slate-700'
+          isHovering ? 'border-purple-400 dark:border-purple-600' : 'border-slate-200 dark:border-slate-700'
         } p-6 relative focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400 focus:ring-offset-2 dark:focus:ring-offset-slate-900`}
-        style={{ 
+        style={{
           height: '70vh',
           cursor: isDragging ? 'grabbing' : 'grab',
           overflow: 'hidden',
@@ -544,7 +578,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
           </div>
         )}
-        
+
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
             <p className="text-red-800 dark:text-red-200 text-sm">
@@ -553,7 +587,7 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
           </div>
         )}
 
-        <div 
+        <div
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transformOrigin: 'top left',
