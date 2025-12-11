@@ -354,6 +354,17 @@ export const createStory = mutation({
 export const updateStoryTitle = mutation({
   args: { storyId: v.id('stories'), title: v.string() },
   handler: async (ctx, args) => {
+    const user = await me(ctx);
+    
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error('Story not found');
+    
+    const isOwner = story.createdBy === user._id;
+    const isAdmin = user.roles?.includes('admin');
+    if (!isOwner && !isAdmin) {
+      throw new Error('You do not have permission to update this story.');
+    }
+    
     await ctx.db.patch(args.storyId, { title: args.title });
   },
 });
@@ -361,6 +372,17 @@ export const updateStoryTitle = mutation({
 export const updateStorySummary = mutation({
   args: { storyId: v.id('stories'), summary: v.string() },
   handler: async (ctx, args) => {
+    const user = await me(ctx);
+    
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error('Story not found');
+    
+    const isOwner = story.createdBy === user._id;
+    const isAdmin = user.roles?.includes('admin');
+    if (!isOwner && !isAdmin) {
+      throw new Error('You do not have permission to update this story.');
+    }
+    
     await ctx.db.patch(args.storyId, { summary: args.summary });
   },
 });

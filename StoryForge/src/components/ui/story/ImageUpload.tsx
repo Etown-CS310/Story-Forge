@@ -152,15 +152,6 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
     fileInputRef.current?.click();
   };
 
-  // Handle clicks on the drop zone (but not on the button itself)
-  const handleDropZoneClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Don't trigger if clicking on the button
-    if ((e.target as HTMLElement).closest('button')) {
-      return;
-    }
-    triggerFileInput();
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -196,56 +187,41 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
           />
         </div>
       ) : (
-        <div 
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => { void handleDrop(e); }}
-          onClick={handleDropZoneClick}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
-            isDragging 
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
-              : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600'
-          }`}
-        >
-          <div className="flex flex-col items-center gap-3 pointer-events-none">
-            <Upload className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
-            <div className="text-sm text-slate-600 dark:text-slate-400">
-              {uploading 
-                ? 'Uploading...' 
-                : isDragging 
-                  ? 'Drop image here' 
-                  : 'Drag and drop or click to upload'}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => { void handleFileSelect(e); }}
-              className="hidden"
-              disabled={uploading}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={uploading}
-              onClick={triggerFileInput}
-              className="gap-2 pointer-events-auto"
-              type="button"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  Choose File
-                </>
+        <div className="space-y-3">
+          <div 
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => { void handleDrop(e); }}
+            onClick={triggerFileInput}
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+              isDragging 
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
+                : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600'
+            }`}
+          >
+            <div className="flex flex-col items-center gap-3">
+              <Upload className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                {uploading 
+                  ? 'Uploading...' 
+                  : isDragging 
+                    ? 'Drop image here' 
+                    : 'Click to upload or drag and drop'}
+              </div>
+              {uploading && (
+                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
               )}
-            </Button>
+            </div>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={(e) => { void handleFileSelect(e); }}
+            className="hidden"
+            disabled={uploading}
+          />
         </div>
       )}
 
