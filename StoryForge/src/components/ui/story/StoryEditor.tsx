@@ -927,34 +927,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 onChange={(e) => setNodeContent(e.target.value)}
               />
 
-              <AIAssistant
-                key={aiAssistantKey}
-                content={nodeContent}
-                storyId={storyId}
-                nodeId={selectedNodeId ?? undefined}
-                onApplySuggestion={(newContent, newTitle) => {
-                  setNodeContent(newContent);
-                  if (newTitle) {
-                    setNodeTitle(newTitle);
-                  }
-                }}
-                onGenerateChoice={(label, description, title) => {
-                  setNewChoiceLabel(label);
-                  setNewNodeContent(description);
-                  setNewSceneTitle(title || '');
-                  requestAnimationFrame(() => {
-                    const el = addSceneSectionRef.current;
-                    if (el) {
-                      el.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start',
-                      });
-                    }
-                  });
-                }}
-                onOpenSavedViewer={() => setSavedSuggestionsOpen(true)}
-              />
-              
               <div className="flex gap-3 items-center">
                 <Button
                   onClick={() => {
@@ -985,6 +957,34 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   </span>
                 )}
               </div>
+
+              <AIAssistant
+                key={aiAssistantKey}
+                content={nodeContent}
+                storyId={storyId}
+                nodeId={selectedNodeId ?? undefined}
+                onApplySuggestion={(newContent, newTitle) => {
+                  setNodeContent(newContent);
+                  if (newTitle) {
+                    setNodeTitle(newTitle);
+                  }
+                }}
+                onGenerateChoice={(label, description, title) => {
+                  setNewChoiceLabel(label);
+                  setNewNodeContent(description);
+                  setNewSceneTitle(title || '');
+                  requestAnimationFrame(() => {
+                    const el = addSceneSectionRef.current;
+                    if (el) {
+                      el.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      });
+                    }
+                  });
+                }}
+                onOpenSavedViewer={() => setSavedSuggestionsOpen(true)}
+              />
 
               {outgoing.length > 0 && (
                 <div className="mt-6">
