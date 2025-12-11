@@ -667,6 +667,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     }
   }, [graph, selectedNodeId, originalNodeData]);
 
+  // Reset paths preview to expanded when switching nodes
+  React.useEffect(() => {
+    setIsPathsExpanded(true);
+  }, [selectedNodeId]);
+
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
   const aiAssistantKey = selectedNodeId ?? 'no-node';
 
@@ -989,11 +994,11 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
               {outgoing.length > 0 && (
                 <div className="mt-6">
-                  <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-5 bg-white dark:bg-slate-800">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900 p-5">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-purple-100 dark:border-purple-900">
                       <div className="flex items-center gap-2">
-                        <GitBranch className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <GitBranch className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
                           Current Paths Preview
                         </div>
                       </div>
@@ -1001,17 +1006,17 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                         variant="outline"
                         size="sm"
                         onClick={() => setIsPathsExpanded(!isPathsExpanded)}
-                        className="gap-1.5 h-7 text-xs"
+                        className="gap-1.5 h-7 text-xs border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
                       >
                         {isPathsExpanded ? (
                           <>
-                            <ChevronUp className="w-3 h-3" />
-                            Collapse
+                            <ChevronUp className="w-3 h-3 text-purple-700 dark:text-purple-300" />
+                            <span className="text-purple-700 dark:text-purple-300 font-medium">Collapse</span>
                           </>
                         ) : (
                           <>
-                            <ChevronDown className="w-3 h-3" />
-                            Expand
+                            <ChevronDown className="w-3 h-3 text-purple-700 dark:text-purple-300" />
+                            <span className="text-purple-700 dark:text-purple-300 font-medium">Expand</span>
                           </>
                         )}
                       </Button>

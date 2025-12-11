@@ -390,9 +390,9 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
   };
 
   return (
-    <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900">
-      <CardHeader className={`${!collapsed ? 'border-b border-purple-100 dark:border-purple-900 !py-2' : '!py-1'}`}>
-        <CardTitle className="flex items-center justify-between text-purple-700 dark:text-purple-300">
+    <Card className="border-orange-200 dark:border-orange-800 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950 dark:to-slate-900">
+      <CardHeader className={`${!collapsed ? 'border-b border-orange-100 dark:border-orange-900 !py-2' : '!py-1'}`}>
+        <CardTitle className="flex items-center justify-between text-orange-700 dark:text-orange-300">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5" />
             AI Assistant
@@ -403,11 +403,11 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
                 onClick={onOpenSavedViewer}
                 variant="outline"
                 size="sm"
-                className="h-8 px-3 border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
+                className="h-8 px-3 border-2 border-orange-300 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900"
               >
                 <div className="flex items-center gap-1.5">
-                  <Book className="w-4 h-4 text-purple-700 dark:text-purple-300" />
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">My Saved</span>
+                  <Book className="w-4 h-4 text-orange-700 dark:text-orange-300" />
+                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">My Saved</span>
                 </div>
               </Button>
             )}
@@ -415,17 +415,17 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
               onClick={() => setCollapsed(!collapsed)}
               variant="outline"
               size="sm"
-              className="h-8 px-3 border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
+              className="h-8 px-3 border-2 border-orange-300 dark:border-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900"
             >
               {collapsed ? (
                 <div className="flex items-center gap-1.5">
-                  <ChevronDown className="w-4 h-4 text-purple-700 dark:text-purple-300" />
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Expand</span>
+                  <ChevronDown className="w-4 h-4 text-orange-700 dark:text-orange-300" />
+                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Expand</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <ChevronUp className="w-4 h-4 text-purple-700 dark:text-purple-300" />
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Collapse</span>
+                  <ChevronUp className="w-4 h-4 text-orange-700 dark:text-orange-300" />
+                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Collapse</span>
                 </div>
               )}
             </Button>
@@ -640,7 +640,7 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
           )}
 
           {result && (
-            <div className="p-4 rounded-lg bg-white dark:bg-slate-800 border border-purple-200 dark:border-purple-700 space-y-3">
+            <div className="p-4 rounded-lg bg-white dark:bg-slate-800 border border-orange-200 dark:border-orange-700 space-y-3">
               <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                 {result}
               </div>
@@ -667,12 +667,12 @@ export default function AIAssistant({ content, onApplySuggestion, onGenerateChoi
           )}
 
           {feedbackResult && (
-            <div className="p-4 rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border border-purple-200 dark:border-purple-800">
+            <div className="p-4 rounded-lg bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border border-orange-200 dark:border-orange-800">
               <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                <h3 className="font-semibold text-purple-900 dark:text-purple-100">Revised Based on Feedback</h3>
+                <MessageSquare className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <h3 className="font-semibold text-orange-900 dark:text-orange-100">Revised Based on Feedback</h3>
               </div>
-              <div className="text-sm text-purple-900 dark:text-purple-100 whitespace-pre-wrap">
+              <div className="text-sm text-orange-900 dark:text-orange-100 whitespace-pre-wrap">
                 {feedbackResult}
               </div>
               <div className="flex gap-2 mt-3">
