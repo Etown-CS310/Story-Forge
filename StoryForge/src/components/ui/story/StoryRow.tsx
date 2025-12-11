@@ -57,7 +57,7 @@ export default function StoryRow({
         />
 
         <Button variant="destructive" size="sm" disabled={deleting} onClick={() => setDeleteModalOpen(true)}>
-          {deleting ? 'Deleting...' : 'Delete'}
+          {deleting ? 'Deleting…' : 'Delete'}
         </Button>
 
         <Button variant="secondary" size="sm" onClick={() => onEdit(story._id)} className="gap-2">
