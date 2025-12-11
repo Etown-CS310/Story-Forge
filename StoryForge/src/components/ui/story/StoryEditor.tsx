@@ -637,7 +637,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   // Reset to graph view when story changes (don't reset when graph data updates)
   React.useEffect(() => {
     setViewMode('graph');
-    setSelectedNodeId(null); // Reset selected node so root will be selected when graph loads
+    setSelectedNodeId(null);
   }, [storyId]);
 
   // Initialize selectedNodeId to root node when graph loads
@@ -655,7 +655,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     setNodeContent(sel?.content ?? '');
     setNodeTitle(sel?.title ?? '');
 
-    // Store original values for change detection (only if not already stored)
     if (!originalNodeData.has(selectedNodeId)) {
       setOriginalNodeData(prev => {
         const updated = new Map(prev);
@@ -668,13 +667,9 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     }
   }, [graph, selectedNodeId, originalNodeData]);
 
-  // Ref for scrolling to the Add Scene section
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
-
-  // Add a key that changes when selectedNodeId changes to force AIAssistant to remount
   const aiAssistantKey = selectedNodeId ?? 'no-node';
 
-  // Check if there are unsaved changes
   const hasUnsavedChanges = () => {
     if (!selectedNodeId) return false;
     const original = originalNodeData.get(selectedNodeId);
@@ -682,19 +677,16 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     return nodeContent !== original.content || nodeTitle !== original.title;
   };
 
-  // Check if we can switch nodes (handle unsaved changes)
   const handleNodeSwitch = (newNodeId: Id<'nodes'>) => {
     if (hasUnsavedChanges()) {
       const confirmSwitch = window.confirm(
         'You have unsaved changes. Do you want to save them before switching scenes?'
       );
       if (confirmSwitch) {
-        // Save current node then switch
         if (selectedNodeId) {
           updateNode({ nodeId: selectedNodeId, content: nodeContent })
             .then(() => updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle }))
             .then(() => {
-              // Update original data after save
               setOriginalNodeData(prev => {
                 const updated = new Map(prev);
                 updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
@@ -705,16 +697,13 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
             .catch(error => console.error('Failed to save changes:', error));
         }
       } else {
-        // Discard changes and switch
         setSelectedNodeId(newNodeId);
       }
     } else {
-      // No unsaved changes, switch directly
       setSelectedNodeId(newNodeId);
     }
   };
 
-  // Handle close with unsaved changes check
   const handleClose = () => {
     if (hasUnsavedChanges()) {
       setShowCloseWarning(true);
@@ -723,10 +712,8 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     }
   };
 
-  // Save current node and close
   const handleSaveAndClose = async () => {
     if (!selectedNodeId) {
-      // No node selected, just close
       setShowCloseWarning(false);
       onClose();
       return;
@@ -735,7 +722,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     try {
       await updateNode({ nodeId: selectedNodeId, content: nodeContent });
       await updateNodeTitle({ nodeId: selectedNodeId, title: nodeTitle });
-      // Update original data after save
       setOriginalNodeData(prev => {
         const updated = new Map(prev);
         updated.set(selectedNodeId, { content: nodeContent, title: nodeTitle });
@@ -748,7 +734,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
     }
   };
 
-  // Discard changes and close
   const handleDiscardAndClose = () => {
     setShowCloseWarning(false);
     onClose();
@@ -780,44 +765,52 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
   return (
     <Card className="lg:col-span-2 shadow-lg border-slate-200 dark:border-slate-700">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 dark:border-slate-700">
-        <CardTitle className="flex items-center gap-2">
-          <Edit className="w-5 h-5 text-blue-600" />
-          Edit Story
-        </CardTitle>
-        <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-1 bg-slate-50 dark:bg-slate-800">
-            <button
-              onClick={() => setViewMode('graph')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
-                viewMode === 'graph'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Network className="w-3.5 h-3.5" />
-              Graph
-            </button>
-            <button
-              onClick={() => setViewMode('edit')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
-                viewMode === 'edit'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Edit className="w-3.5 h-3.5" />
-              Edit
-            </button>
+      <CardHeader className="border-b border-slate-100 dark:border-slate-700">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center gap-2 mb-2">
+              <Edit className="w-5 h-5 text-blue-600" />
+              {graph.title}
+            </CardTitle>
+            {graph.summary && (
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">
+                {graph.summary}
+              </p>
+            )}
           </div>
-          <Button variant="outline" onClick={handleClose} className="gap-2">
-            <X className="w-4 h-4" />
-            Close
-          </Button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-1 bg-slate-50 dark:bg-slate-800">
+              <button
+                onClick={() => setViewMode('graph')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                  viewMode === 'graph'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Network className="w-3.5 h-3.5" />
+                Graph
+              </button>
+              <button
+                onClick={() => setViewMode('edit')}
+                className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                  viewMode === 'edit'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Edit className="w-3.5 h-3.5" />
+                Edit
+              </button>
+            </div>
+            <Button variant="outline" onClick={handleClose} className="gap-2">
+              <X className="w-4 h-4" />
+              Close
+            </Button>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent className="pt-1">
         {viewMode === 'graph' ? (
           <StoryGraphViewer storyId={storyId} />
         ) : (
@@ -858,7 +851,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               >
                 <div className="space-y-2">
                   {graph.nodes.map((n: any) => {
-                    // Check if this node is a child of the selected node
                     const isChildNode = selectedNodeId && graph.edges.some((e: any) => 
                       e.fromNodeId === selectedNodeId && e.toNodeId === n._id
                     );
@@ -935,7 +927,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 onChange={(e) => setNodeContent(e.target.value)}
               />
 
-              {/* Add key prop to force remount when selectedNodeId changes */}
               <AIAssistant
                 key={aiAssistantKey}
                 content={nodeContent}
@@ -995,7 +986,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 )}
               </div>
 
-              {/* Current Paths Preview with collapsibility */}
               {outgoing.length > 0 && (
                 <div className="mt-6">
                   <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-5 bg-white dark:bg-slate-800">
@@ -1037,7 +1027,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 </div>
               )}
 
-              {/* Outgoing edges */}
               <div className="mt-6">
                 <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Outgoing Choices</div>
                 <div className="space-y-3">
@@ -1077,7 +1066,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   )}
                 </div>
 
-                {/* Create new node + edge */}
                 <div ref={addSceneSectionRef} className="mt-6 rounded-lg border border-slate-200 dark:border-slate-700 p-5 space-y-4 bg-slate-50 dark:bg-slate-900">
                   <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <Plus className="w-4 h-4" />
@@ -1122,7 +1110,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     Create New Path and Scene
                   </Button>
 
-                  {/* Or connect to existing node */}
                   <ExistingEdgeCreator
                     nodes={graph.nodes}
                     fromNodeId={selectedNodeId}
@@ -1137,7 +1124,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
         )}
       </CardContent>
 
-      {/* Delete Edge Confirmation Dialog */}
       <Dialog open={!!deleteConfirmEdgeId} onOpenChange={(isOpen: boolean) => !isOpen && setDeleteConfirmEdgeId(null)}>
         <DialogContent>
           <DialogHeader>
@@ -1167,7 +1153,6 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
         </DialogContent>
       </Dialog>
 
-      {/* Unsaved Changes Warning Dialog */}
       <Dialog open={showCloseWarning} onOpenChange={(isOpen: boolean) => !isOpen && setShowCloseWarning(false)}>
         <DialogContent>
           <DialogHeader>
