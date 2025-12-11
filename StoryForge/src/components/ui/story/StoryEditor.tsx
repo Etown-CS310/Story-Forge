@@ -841,7 +841,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                   title="Edit story title"
                 >
                   <Edit className="w-3.5 h-3.5" />
-                  Edit
+                  Edit Heading
                 </Button>
               </CardTitle>
             )}
@@ -908,7 +908,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                       title="Edit story summary"
                     >
                       <Edit className="w-3.5 h-3.5" />
-                      Edit
+                      Edit Summary
                     </Button>
                   </div>
                 ) : (
