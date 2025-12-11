@@ -34,7 +34,6 @@ export default function StoryRow({
       
       // Success - close dialog and call callback
       setDeleteModalOpen(false);
-      setDeleteError('');
       onDeleted?.();
     } catch (err) {
       console.error('Failed to delete story:', err);
