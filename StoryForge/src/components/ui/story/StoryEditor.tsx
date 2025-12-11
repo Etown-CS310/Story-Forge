@@ -848,6 +848,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 className={`rounded-lg border border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900 transition-all duration-300 ${
                   isFullHeight ? 'h-[48rem]' : 'h-96'
                 }`}
+                thumbClassName="bg-purple-600"
               >
                 <div className="space-y-2">
                   {graph.nodes.map((n: any) => {
