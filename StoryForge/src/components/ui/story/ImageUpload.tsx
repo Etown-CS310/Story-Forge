@@ -13,6 +13,7 @@ interface ImageUploadProps {
 export default function ImageUpload({ nodeId }: ImageUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string>('');
+  const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const generateUploadUrl = useMutation(api.image.generateUploadUrl);
@@ -20,10 +21,7 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
   const removeImage = useMutation(api.image.removeImageFromNode);
   const imageUrl = useQuery(api.image.getNodeImageUrl, { nodeId });
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const validateAndUploadFile = async (file: File) => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
@@ -62,29 +60,58 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
         storageId: storageId as Id<'_storage'>,
       });
       
-      // Clear any previous errors on success
       setError('');
     } catch (err) {
       console.error('Upload error:', err);
       setError('Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await validateAndUploadFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await validateAndUploadFile(file);
+  };
+
   const handleRemove = async () => {
     try {
       await removeImage({ nodeId });
-      // Clear any previous errors on success
       setError('');
     } catch (err) {
       console.error('Remove error:', err);
       setError('Failed to remove image');
     }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -122,11 +149,24 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
           />
         </div>
       ) : (
-        <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-8 text-center bg-slate-50 dark:bg-slate-900">
+        <div 
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => { void handleDrop(e); }}
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            isDragging 
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
+              : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+          }`}
+        >
           <div className="flex flex-col items-center gap-3">
-            <Upload className="w-8 h-8 text-slate-400" />
+            <Upload className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
             <div className="text-sm text-slate-600 dark:text-slate-400">
-              {uploading ? 'Uploading...' : 'No image attached'}
+              {uploading 
+                ? 'Uploading...' 
+                : isDragging 
+                  ? 'Drop image here' 
+                  : 'Drag and drop or click to upload'}
             </div>
             <input
               ref={fileInputRef}
@@ -134,30 +174,28 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
               accept="image/*"
               onChange={(e) => { void handleFileSelect(e); }}
               className="hidden"
-              id={`image-upload-${nodeId}`}
               disabled={uploading}
             />
-            <label htmlFor={`image-upload-${nodeId}`}>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={uploading}
-                className="gap-2 cursor-pointer"
-                type="button"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4" />
-                    Upload Image
-                  </>
-                )}
-              </Button>
-            </label>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={triggerFileInput}
+              className="gap-2"
+              type="button"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  Choose File
+                </>
+              )}
+            </Button>
           </div>
         </div>
       )}
