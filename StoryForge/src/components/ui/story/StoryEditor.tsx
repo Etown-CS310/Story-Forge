@@ -995,7 +995,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
               {outgoing.length > 0 && (
                 <div className="mt-6">
                   <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900 p-5">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-purple-100 dark:border-purple-900">
+                    <div className={`flex items-center justify-between ${isPathsExpanded ? 'mb-4 pb-4 border-b border-purple-100 dark:border-purple-900' : ''}`}>
                       <div className="flex items-center gap-2">
                         <GitBranch className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                         <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
