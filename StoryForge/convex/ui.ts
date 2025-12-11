@@ -2,12 +2,18 @@ import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 
 // Helper: get current user document
+// This function always returns a user or throws an error
 async function me(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
-  return await ctx.db
+  if (!identity) throw new Error('Unauthorized');
+  
+  const user = await ctx.db
     .query('users')
     .withIndex('by_externalId', (q: any) => q.eq('externalId', identity.subject))
     .unique();
+  
+  if (!user) throw new Error('User not found');
+  return user;
 }
 
 export const listStories = query({
@@ -85,7 +91,7 @@ export const createNodeAndEdge = mutation({
     fromNodeId: v.id('nodes'),
     label: v.string(),
     content: v.string(),
-    title: v.optional(v.string()), // ← Added title parameter
+    title: v.optional(v.string()),
   },
   handler: async (ctx, { storyId, fromNodeId, label, content, title }) => {
     const from = await ctx.db.get(fromNodeId);
@@ -93,7 +99,7 @@ export const createNodeAndEdge = mutation({
     const nodeId = await ctx.db.insert('nodes', {
       storyId,
       role: 'narrator',
-      title: title ?? 'Untitled Scene', // ← Use provided title or default only when undefined/null
+      title: title ?? 'Untitled Scene',
       content,
       metadata: {},
       version: 1,
@@ -131,7 +137,6 @@ export const startSessionForMe = mutation({
   args: { storyId: v.id('stories') },
   handler: async (ctx, { storyId }) => {
     const user = await me(ctx);
-    if (!user) throw new Error('Unauthorized');
     const story = await ctx.db.get(storyId);
     if (!story) throw new Error('Story not found');
     if (!story.rootNodeId) throw new Error('Story not seeded');
@@ -167,7 +172,6 @@ export const listMySessions = query({
   args: {},
   handler: async (ctx) => {
     const user = await me(ctx);
-    if (!user) return [];
     const sessions = await ctx.db
       .query('sessions')
       .withIndex('by_participant', (q: any) => q.eq('participants', user._id))
@@ -187,7 +191,6 @@ export const getSessionState = query({
   args: { sessionId: v.id('sessions') },
   handler: async (ctx, { sessionId }) => {
     const user = await me(ctx);
-    if (!user) throw new Error('Unauthorized');
     const session = await ctx.db.get(sessionId);
     if (!session || !session.participants.includes(user._id)) throw new Error('No access');
 
@@ -231,7 +234,6 @@ export const chooseEdge = mutation({
   args: { sessionId: v.id('sessions'), edgeId: v.id('edges') },
   handler: async (ctx, { sessionId, edgeId }) => {
     const user = await me(ctx);
-    if (!user) throw new Error('Unauthorized');
 
     const session = await ctx.db.get(sessionId);
     if (!session || !session.participants.includes(user._id)) throw new Error('No access');
@@ -262,7 +264,6 @@ export const advanceSession = mutation({
   args: { sessionId: v.id('sessions') },
   handler: async (ctx, { sessionId }) => {
     const user = await me(ctx);
-    if (!user) throw new Error('Unauthorized');
 
     const session = await ctx.db.get(sessionId);
     if (!session || !session.participants.includes(user._id)) throw new Error('No access');
@@ -300,12 +301,11 @@ export const createStory = mutation({
   args: {
     title: v.string(),
     summary: v.optional(v.string()),
-    rootContent: v.string(), // first node content
+    rootContent: v.string(),
     isPublic: v.boolean(),
     rootNodeTitle: v.optional(v.string()),
   },
   handler: async (ctx, { title, summary, rootContent, isPublic, rootNodeTitle }) => {
-    // assumes you have a `me(ctx)` helper that returns the current user doc
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error('Unauthorized');
 
@@ -315,7 +315,7 @@ export const createStory = mutation({
       .unique();
     if (!user) throw new Error('No user record');
 
-    // 1) create the story (published or draft—here we publish for convenience)
+    // 1) create the story
     const storyId = await ctx.db.insert('stories', {
       title,
       summary,
@@ -377,10 +377,11 @@ export async function getOrCreateUser(ctx: any) {
 }
 
 export const deleteStory = mutation({
-  args: { storyId: v.id('stories') },
+  args: { 
+    storyId: v.id('stories'),
+  },
   handler: async (ctx, { storyId }) => {
     const user = await me(ctx);
-    if (!user) throw new Error('Unauthorized');
 
     const story = await ctx.db.get(storyId);
     if (!story) throw new Error('Story not found');
@@ -419,8 +420,6 @@ export const deleteStory = mutation({
       .withIndex('by_story', (q) => q.eq('storyId', storyId))
       .collect();
 
-    // Delete messages for each session in parallel,
-    // then delete the sessions in parallel
     await Promise.all(
       sessions.map(async (session) => {
         const messages = await ctx.db
@@ -457,7 +456,5 @@ export const deleteStory = mutation({
     // 6. DELETE STORY ITSELF
     //
     await ctx.db.delete(storyId);
-
-    return { ok: true };
   },
 });

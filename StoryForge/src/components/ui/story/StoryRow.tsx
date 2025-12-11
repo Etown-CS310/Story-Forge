@@ -3,34 +3,53 @@ import { useMutation } from 'convex/react';
 import { api } from '@/../convex/_generated/api';
 import { Id } from '@/../convex/_generated/dataModel';
 import { Button } from '@/components/ui/button';
-import { Edit, Play } from 'lucide-react';
+import { Edit, Play, Trash2, AlertCircle } from 'lucide-react';
 import { ConfirmDeleteDialog } from '@/components/ui/confirmDeleteDialog';
 
 export default function StoryRow({
   story,
   onEdit,
   onStart,
-  onDelete,
+  onDeleted,
 }: {
   story: any;
   onEdit: (id: Id<'stories'>) => void;
   onStart?: (sessionId: Id<'sessions'>) => void;
-  onDelete: (id: Id<'stories'>) => Promise<void>;
+  onDeleted?: () => void;
 }) {
   const create = useMutation(api.ui.startSessionForMe);
+  const deleteStoryMutation = useMutation(api.ui.deleteStory);
+  
   const [creating, setCreating] = React.useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
+  const [deleteError, setDeleteError] = React.useState<string>('');
 
   const handleDelete = async () => {
     setDeleting(true);
+    setDeleteError('');
+    
     try {
-      await onDelete(story._id);
+      await deleteStoryMutation({ storyId: story._id });
+      
+      // Success - close dialog and call callback
       setDeleteModalOpen(false);
+      setDeleteError('');
+      onDeleted?.();
     } catch (err) {
       console.error('Failed to delete story:', err);
+      setDeleteError(
+        err instanceof Error ? err.message : 'Failed to delete story. Please try again.'
+      );
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setDeleteModalOpen(open);
+    if (!open) {
+      setDeleteError('');
     }
   };
 
@@ -45,23 +64,35 @@ export default function StoryRow({
         )}
       </div>
 
-      <div className="flex justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-1.5">
         <ConfirmDeleteDialog
           open={deleteModalOpen}
-          onOpenChange={setDeleteModalOpen}
+          onOpenChange={handleDialogOpenChange}
           title="Delete Story"
-          description={`Are you sure you want to delete "${story.title}"? This action cannot be undone.`}
+          description={
+            <div className="space-y-3">
+              <p>Are you sure you want to delete "{story.title}"? This will also delete all associated sessions and cannot be undone.</p>
+              
+              {deleteError && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+            </div>
+          }
           confirmLabel="Confirm Delete"
           loading={deleting}
           onConfirm={handleDelete}
         />
 
-        <Button variant="destructive" size="sm" disabled={deleting} onClick={() => setDeleteModalOpen(true)}>
-          {deleting ? 'Deleting…' : 'Delete'}
-        </Button>
-
-        <Button variant="secondary" size="sm" onClick={() => onEdit(story._id)} className="gap-2">
-          <Edit className="w-4 h-4" />
+        <Button 
+          variant="secondary" 
+          size="sm" 
+          onClick={() => onEdit(story._id)} 
+          className="gap-1.5 px-3"
+        >
+          <Edit className="w-3.5 h-3.5" />
           Edit
         </Button>
 
@@ -84,10 +115,21 @@ export default function StoryRow({
             })();
           }}
           variant="blue"
-          className="gap-2"
+          className="gap-1.5 px-3"
         >
-          <Play className="w-4 h-4" />
+          <Play className="w-3.5 h-3.5" />
           {creating ? 'Starting…' : 'Start'}
+        </Button>
+
+        <Button 
+          variant="destructive" 
+          size="sm" 
+          disabled={deleting} 
+          onClick={() => setDeleteModalOpen(true)}
+          className="gap-1.5 px-3"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          {deleting ? 'Deleting…' : 'Delete'}
         </Button>
       </div>
     </div>

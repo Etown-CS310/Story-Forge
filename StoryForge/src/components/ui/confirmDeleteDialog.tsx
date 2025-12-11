@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,45 +12,52 @@ import { Button } from '@/components/ui/button';
 interface ConfirmDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title?: string;
-  description?: string;
+  title: string;
+  description?: React.ReactNode;
   confirmLabel?: string;
+  cancelLabel?: string;
   loading?: boolean;
-  onConfirm: () => void | Promise<void>;
+  onConfirm: () => void | Promise<void>; // ← Can be sync or async
 }
 
 export function ConfirmDeleteDialog({
   open,
   onOpenChange,
-  title = 'Delete Item',
-  description = 'Are you sure you want to delete this? This action cannot be undone.',
+  title,
+  description,
   confirmLabel = 'Delete',
+  cancelLabel = 'Cancel',
   loading = false,
   onConfirm,
 }: ConfirmDeleteDialogProps) {
+  const handleConfirm = async () => {
+    try {
+      // Properly await the onConfirm call in case it's async
+      await onConfirm();
+    } catch (err) {
+      // Error is handled by the parent component (handleDelete in StoryRow)
+      // This catch prevents unhandled promise rejections in case parent doesn't handle it
+      console.error('Confirm action failed:', err);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-
-        <DialogFooter className="flex justify-end gap-2">
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-            Cancel
+            {cancelLabel}
           </Button>
-
-          <Button
-            variant="destructive"
-            onClick={() => {
-              void (async () => {
-                await onConfirm();
-              })();
-            }}
+          <Button 
+            variant="destructive" 
+            onClick={() => { void handleConfirm(); }} 
             disabled={loading}
           >
-            {loading ? 'Deleting…' : confirmLabel}
+            {loading ? 'Deleting...' : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
