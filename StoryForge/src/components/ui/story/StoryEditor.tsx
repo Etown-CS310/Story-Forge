@@ -889,7 +889,7 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
 
             {/* Middle: edit node */}
             <div className="space-y-4 md:col-span-2">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Selected Scene</div>
+              <div className="text-md font-semibold text-slate-700 dark:text-slate-300">Selected Scene</div>
               <div className="flex items-center gap-3 col-span-2">
                 <Input
                   type="text"
@@ -992,49 +992,50 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                 onOpenSavedViewer={() => setSavedSuggestionsOpen(true)}
               />
 
-              {outgoing.length > 0 && (
-                <div className="mt-6">
-                  <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900 p-5">
-                    <div className={`flex items-center justify-between ${isPathsExpanded ? 'mb-4 pb-4 border-b border-purple-100 dark:border-purple-900' : ''}`}>
-                      <div className="flex items-center gap-2">
-                        <GitBranch className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                        <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
-                          Current Paths Preview
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsPathsExpanded(!isPathsExpanded)}
-                        className="gap-1.5 h-7 text-xs border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
-                      >
-                        {isPathsExpanded ? (
-                          <>
-                            <ChevronUp className="w-3 h-3 text-purple-700 dark:text-purple-300" />
-                            <span className="text-purple-700 dark:text-purple-300 font-medium">Collapse</span>
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="w-3 h-3 text-purple-700 dark:text-purple-300" />
-                            <span className="text-purple-700 dark:text-purple-300 font-medium">Expand</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {isPathsExpanded && (
-                      <LocalNodeGraph
-                        currentNodeId={selectedNodeId}
-                        nodes={graph.nodes}
-                        edges={graph.edges}
-                        isDarkMode={isDarkMode}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
               <div className="mt-6">
-                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Outgoing Choices</div>
+                <div className="text-md font-semibold text-slate-700 dark:text-slate-300 mb-3">Outgoing Choices</div>
+
+                {outgoing.length > 0 && (
+                    <div className="mt-4 mb-4">
+                      <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-slate-900 p-5">
+                        <div className={`flex items-center justify-between ${isPathsExpanded ? 'mb-4 pb-4 border-b border-purple-100 dark:border-purple-900' : ''}`}>
+                          <div className="flex items-center gap-2">
+                            <GitBranch className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                              Current Paths Preview
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsPathsExpanded(!isPathsExpanded)}
+                            className="gap-1.5 h-7 text-xs border-2 border-purple-300 dark:border-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900"
+                          >
+                            {isPathsExpanded ? (
+                              <>
+                                <ChevronUp className="w-3 h-3 text-purple-700 dark:text-purple-300" />
+                                <span className="text-purple-700 dark:text-purple-300 font-medium">Collapse</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3 text-purple-700 dark:text-purple-300" />
+                                <span className="text-purple-700 dark:text-purple-300 font-medium">Expand</span>
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        {isPathsExpanded && (
+                          <LocalNodeGraph
+                            currentNodeId={selectedNodeId}
+                            nodes={graph.nodes}
+                            edges={graph.edges}
+                            isDarkMode={isDarkMode}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                 <div className="space-y-3">
                   {outgoing.map((e: any) => {
                     const to = graph.nodes.find((n: any) => n._id === e.toNodeId);
