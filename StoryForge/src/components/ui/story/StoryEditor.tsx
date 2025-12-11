@@ -805,9 +805,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                     void (async () => {
                       try {
                         await updateStoryTitle({ storyId, title: editedTitle });
-                        setIsEditingTitle(false);
                       } catch (error) {
                         console.error('Failed to update story title:', error);
+                      } finally {
+                        setIsEditingTitle(false);
                       }
                     })();
                   }}
@@ -868,9 +869,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
                       void (async () => {
                         try {
                           await updateStorySummary({ storyId, summary: editedSummary });
-                          setIsEditingSummary(false);
                         } catch (error) {
                           console.error('Failed to update story summary:', error);
+                        } finally {
+                          setIsEditingSummary(false);
                         }
                       })();
                     }}
