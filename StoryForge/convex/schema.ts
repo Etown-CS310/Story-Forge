@@ -135,7 +135,7 @@ export default defineSchema({
       v.literal('choices'),
       v.literal('rewrite'),
       v.literal('enhance')
-    ), // Only allowed values
+    ),
     
     // For improvement suggestions
     suggestions: v.optional(v.string()),
@@ -163,5 +163,6 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_story', ['userId', 'storyId'])
-    .index('by_user_node', ['userId', 'nodeId']),
+    .index('by_user_node', ['userId', 'nodeId'])
+    .index('by_story', ['storyId']),
 });

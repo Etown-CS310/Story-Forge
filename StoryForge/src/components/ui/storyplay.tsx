@@ -32,6 +32,7 @@ export default function StoryPlay() {
   const [activeSessionId, setActiveSessionId] = React.useState<Id<'sessions'> | null>(null);
   const rightRef = React.useRef<HTMLDivElement | null>(null);
   const ensure = useMutation(api.ui.ensureUser);
+  
   React.useEffect(() => {
     void ensure();
   }, [ensure]);
@@ -103,6 +104,16 @@ export default function StoryPlay() {
                   onStart={(sessionId) => {
                     setActiveSessionId(sessionId);
                     setEditingStoryId(null);
+                  }}
+                  onDeleted={() => {
+                    // Clean up state after successful deletion
+                    if (editingStoryId === s._id) {
+                      setEditingStoryId(null);
+                    }
+                    const activeSession = mySessions?.find((session) => session._id === activeSessionId);
+                    if (activeSession && activeSession.storyId === s._id) {
+                      setActiveSessionId(null);
+                    }
                   }}
                 />
               ))}
