@@ -597,6 +597,8 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const updateNodeTitle = useMutation(api.ui.updateNodeTitle);
   const createEdge = useMutation(api.ui.createEdge);
   const deleteEdge = useMutation(api.ui.deleteEdge);
+  const updateStoryTitle = useMutation(api.ui.updateStoryTitle);
+  const updateStorySummary = useMutation(api.ui.updateStorySummary);
 
   const [viewMode, setViewMode] = React.useState<'edit' | 'graph'>('graph');
   const [selectedNodeId, setSelectedNodeId] = React.useState<Id<'nodes'> | null>(null);
@@ -612,6 +614,10 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   const [deleteConfirmEdgeId, setDeleteConfirmEdgeId] = React.useState<Id<'edges'> | null>(null);
   const [showCloseWarning, setShowCloseWarning] = React.useState(false);
   const [isPathsExpanded, setIsPathsExpanded] = React.useState(true);
+  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const [isEditingSummary, setIsEditingSummary] = React.useState(false);
+  const [editedTitle, setEditedTitle] = React.useState('');
+  const [editedSummary, setEditedSummary] = React.useState('');
   
   // Set initial dark mode state on client side
   React.useEffect(() => {
@@ -671,6 +677,14 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
   React.useEffect(() => {
     setIsPathsExpanded(true);
   }, [selectedNodeId]);
+
+  // Initialize edited values when graph loads
+  React.useEffect(() => {
+    if (graph) {
+      setEditedTitle(graph.title || '');
+      setEditedSummary(graph.summary || '');
+    }
+  }, [graph]);
 
   const addSceneSectionRef = React.useRef<HTMLDivElement>(null);
   const aiAssistantKey = selectedNodeId ?? 'no-node';
@@ -773,14 +787,142 @@ export default function StoryEditor({ storyId, onClose }: { storyId: Id<'stories
       <CardHeader className="border-b border-slate-100 dark:border-slate-700">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <CardTitle className="flex items-center gap-2 mb-2">
-              <Edit className="w-5 h-5 text-blue-600" />
-              {graph.title}
-            </CardTitle>
-            {graph.summary && (
-              <p className="text-sm text-slate-600 dark:text-slate-400 font-normal">
-                {graph.summary}
-              </p>
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2 mb-2">
+                <Edit className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <Input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="flex-1 font-semibold text-lg"
+                  placeholder="Story Title"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  variant="blue"
+                  onClick={() => {
+                    void (async () => {
+                      try {
+                        await updateStoryTitle({ storyId, title: editedTitle });
+                        setIsEditingTitle(false);
+                      } catch (error) {
+                        console.error('Failed to update story title:', error);
+                      }
+                    })();
+                  }}
+                  className="gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    setEditedTitle(graph.title || '');
+                    setIsEditingTitle(false);
+                  }}
+                  className="gap-1.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <CardTitle className="flex items-center gap-2 mb-2">
+                <Edit className="w-5 h-5 text-blue-600" />
+                <span className="flex-1">{graph.title}</span>
+                <Button
+                  size="sm"
+                  variant="blue"
+                  onClick={() => setIsEditingTitle(true)}
+                  className="gap-1.5"
+                  title="Edit story title"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
+              </CardTitle>
+            )}
+
+            {isEditingSummary ? (
+              <div className="flex items-start gap-2">
+                <Textarea
+                  value={editedSummary}
+                  onChange={(e) => setEditedSummary(e.target.value)}
+                  className="flex-1 text-sm resize-none max-h-[80px] overflow-y-auto"
+                  placeholder="Story Summary"
+                  rows={2}
+                  autoFocus
+                  style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#9333ea #e2e8f0'
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="blue"
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          await updateStorySummary({ storyId, summary: editedSummary });
+                          setIsEditingSummary(false);
+                        } catch (error) {
+                          console.error('Failed to update story summary:', error);
+                        }
+                      })();
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      setEditedSummary(graph.summary || '');
+                      setIsEditingSummary(false);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {graph.summary ? (
+                  <div className="flex items-start gap-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-400 font-normal flex-1">
+                      {graph.summary}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="blue"
+                      onClick={() => setIsEditingSummary(true)}
+                      className="gap-1.5 flex-shrink-0"
+                      title="Edit story summary"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edit
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="blue"
+                    onClick={() => setIsEditingSummary(true)}
+                    className="gap-1.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add summary
+                  </Button>
+                )}
+              </>
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">

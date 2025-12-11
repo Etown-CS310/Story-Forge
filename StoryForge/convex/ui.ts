@@ -351,6 +351,20 @@ export const createStory = mutation({
   },
 });
 
+export const updateStoryTitle = mutation({
+  args: { storyId: v.id('stories'), title: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.storyId, { title: args.title });
+  },
+});
+
+export const updateStorySummary = mutation({
+  args: { storyId: v.id('stories'), summary: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.storyId, { summary: args.summary });
+  },
+});
+
 export const ensureUser = mutation({
   args: {},
   handler: async (ctx) => {
