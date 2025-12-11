@@ -14,6 +14,7 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string>('');
   const [isDragging, setIsDragging] = React.useState(false);
+  const dragCounterRef = React.useRef(0); // Track nested drag enter/leave events
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const generateUploadUrl = useMutation(api.image.generateUploadUrl);
@@ -78,21 +79,58 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
     await validateAndUploadFile(file);
   };
 
+  // Check if the drag contains files
+  const hasFiles = (e: React.DragEvent<HTMLDivElement>): boolean => {
+    return e.dataTransfer.types.includes('Files');
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only show drag feedback if files are being dragged
+    if (!hasFiles(e)) return;
+    
+    // Increment counter to track nested enter/leave events
+    dragCounterRef.current += 1;
+    
+    // Only set dragging state on first enter
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true);
+    }
+  };
+
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    
+    // Only prevent default if files are being dragged
+    if (!hasFiles(e)) return;
+    
+    // Set the drop effect to indicate copy operation
+    e.dataTransfer.dropEffect = 'copy';
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    
+    // Decrement counter
+    dragCounterRef.current -= 1;
+    
+    // Only clear dragging state when counter reaches zero
+    // (meaning we've left all nested elements)
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Reset counter and state
+    dragCounterRef.current = 0;
     setIsDragging(false);
 
     const file = e.dataTransfer.files?.[0];
@@ -112,6 +150,15 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  // Handle clicks on the drop zone (but not on the button itself)
+  const handleDropZoneClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't trigger if clicking on the button
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    triggerFileInput();
   };
 
   return (
@@ -150,16 +197,18 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
         </div>
       ) : (
         <div 
+          onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={(e) => { void handleDrop(e); }}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          onClick={handleDropZoneClick}
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
             isDragging 
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
-              : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'
+              : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-600'
           }`}
         >
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-3 pointer-events-none">
             <Upload className={`w-8 h-8 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
             <div className="text-sm text-slate-600 dark:text-slate-400">
               {uploading 
@@ -181,7 +230,7 @@ export default function ImageUpload({ nodeId }: ImageUploadProps) {
               size="sm"
               disabled={uploading}
               onClick={triggerFileInput}
-              className="gap-2"
+              className="gap-2 pointer-events-auto"
               type="button"
             >
               {uploading ? (
