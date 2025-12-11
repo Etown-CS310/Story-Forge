@@ -448,7 +448,7 @@ export const deleteStory = mutation({
     //
     const suggestions = await ctx.db
       .query('savedSuggestions')
-      .filter((s) => s.storyId === storyId)
+      .withIndex('by_story', (q) => q.eq('storyId', storyId))
       .collect();
 
     await Promise.all(suggestions.map((s) => ctx.db.delete(s._id)));

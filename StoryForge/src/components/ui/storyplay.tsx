@@ -105,8 +105,11 @@ export default function StoryPlay() {
                     setActiveSessionId(sessionId);
                     setEditingStoryId(null);
                   }}
+                  
                   onDelete={async (id) => {
-                    // If we're deleting the story we're currently editing, close the editor
+                    await deleteStory({ storyId: id });
+                    
+                    // Clean up state after successful deletion
                     if (editingStoryId === id) {
                       setEditingStoryId(null);
                     }
@@ -114,8 +117,6 @@ export default function StoryPlay() {
                     if (activeSession && activeSession.storyId === id) {
                       setActiveSessionId(null);
                     }
-
-                    await deleteStory({ storyId: id });
                   }}
                 />
               ))}
