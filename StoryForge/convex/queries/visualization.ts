@@ -66,6 +66,7 @@ export const getStoryMermaid = query({
     return {
       storyId,
       title: story.title,
+      summary: story.summary, // Add summary
       mermaid,
       nodeCount: nodes.length,
       edgeCount: edges.length,
@@ -100,6 +101,6 @@ function escapeMermaidText(text: string): string {
     .replace(/\(/g, '&#40;')        // Escape (
     .replace(/\)/g, '&#41;')        // Escape )
     .replace(/\|/g, '&#124;')       // Escape |
-    .replace(/</g, '&#60;')          // Escape <
-    .replace(/>/g, '&#62;');         // Escape >
+    .replace(/</g, '&#60;')         // Escape 
+    .replace(/>/g, '&#62;');        // Escape >
 }

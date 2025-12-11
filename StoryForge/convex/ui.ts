@@ -67,7 +67,14 @@ export const getStoryGraph = query({
       .query('edges')
       .withIndex('by_story_from', (q) => q.eq('storyId', storyId))
       .collect();
-    return { storyId, rootNodeId: story.rootNodeId, nodes, edges };
+    return { 
+      storyId, 
+      rootNodeId: story.rootNodeId, 
+      title: story.title,
+      summary: story.summary,
+      nodes, 
+      edges 
+    };
   },
 });
 
@@ -341,6 +348,42 @@ export const createStory = mutation({
     await ctx.db.patch(storyId, { rootNodeId });
 
     return storyId;
+  },
+});
+
+export const updateStoryTitle = mutation({
+  args: { storyId: v.id('stories'), title: v.string() },
+  handler: async (ctx, args) => {
+    const user = await me(ctx);
+    
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error('Story not found');
+    
+    const isOwner = story.createdBy === user._id;
+    const isAdmin = user.roles?.includes('admin');
+    if (!isOwner && !isAdmin) {
+      throw new Error('You do not have permission to update this story.');
+    }
+    
+    await ctx.db.patch(args.storyId, { title: args.title });
+  },
+});
+
+export const updateStorySummary = mutation({
+  args: { storyId: v.id('stories'), summary: v.string() },
+  handler: async (ctx, args) => {
+    const user = await me(ctx);
+    
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error('Story not found');
+    
+    const isOwner = story.createdBy === user._id;
+    const isAdmin = user.roles?.includes('admin');
+    if (!isOwner && !isAdmin) {
+      throw new Error('You do not have permission to update this story.');
+    }
+    
+    await ctx.db.patch(args.storyId, { summary: args.summary });
   },
 });
 
