@@ -67,7 +67,14 @@ export const getStoryGraph = query({
       .query('edges')
       .withIndex('by_story_from', (q) => q.eq('storyId', storyId))
       .collect();
-    return { storyId, rootNodeId: story.rootNodeId, nodes, edges };
+    return { 
+      storyId, 
+      rootNodeId: story.rootNodeId, 
+      title: story.title,
+      summary: story.summary,
+      nodes, 
+      edges 
+    };
   },
 });
 

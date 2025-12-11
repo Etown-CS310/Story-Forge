@@ -426,10 +426,15 @@ export default function StoryGraphViewer({ storyId }: StoryGraphViewerProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="flex-1">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
             {data.title}
           </h2>
+          {data.summary && (
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 max-w-3xl">
+              {data.summary}
+            </p>
+          )}
           <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
