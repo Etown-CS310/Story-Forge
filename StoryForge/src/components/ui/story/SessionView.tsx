@@ -18,8 +18,58 @@ export default function SessionView({
   const choose = useMutation(api.ui.chooseEdge);
   const advance = useMutation(api.ui.advanceSession);
 
-  // Auto-play: repeatedly advance the session by picking the first available choice
+  const scrollAreaRef = React.useRef<HTMLDivElement | null>(null);
+  const messagesContentRef = React.useRef<HTMLDivElement | null>(null);
+
+  // --- SCROLL LOGIC ---
+  const scrollToBottom = React.useCallback((behavior: ScrollBehavior = 'auto') => {
+    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
+
+    if (!viewport) return;
+
+    viewport.scrollTop = viewport.scrollHeight;
+
+    if (behavior === 'smooth') {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, []);
+
+  // Scroll after new messages render
+  React.useLayoutEffect(() => {
+    if (!data) return;
+
+    const run = () => scrollToBottom('smooth');
+
+    run();
+
+    const raf1 = requestAnimationFrame(run);
+    const raf2 = requestAnimationFrame(run);
+
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [data?.messages.length, scrollToBottom]);
+
+  // Handle dynamic height changes (images, async content)
+  React.useEffect(() => {
+    const el = messagesContentRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+      scrollToBottom('auto');
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrollToBottom]);
+
+  // --- AUTO PLAY ---
   const [autoPlay, setAutoPlay] = React.useState(false);
+
   React.useEffect(() => {
     if (!autoPlay) return;
     let cancelled = false;
@@ -27,26 +77,21 @@ export default function SessionView({
     const step = async () => {
       try {
         const res = await advance({ sessionId });
-        // if server returned null, there are no more choices
         if (!res || cancelled) {
           setAutoPlay(false);
           return;
         }
-        // wait a bit then continue; session state will re-sync via Convex
-        if (!cancelled)
-          setTimeout(() => {
-            void step();
-          }, 1200);
+
+        if (!cancelled) {
+          setTimeout(() => void step(), 1200);
+        }
       } catch (e) {
         console.error('Auto-play failed', e);
         setAutoPlay(false);
       }
     };
 
-    // kick off first step
-    setTimeout(() => {
-      void step();
-    }, 600);
+    setTimeout(() => void step(), 600);
 
     return () => {
       cancelled = true;
@@ -70,28 +115,23 @@ export default function SessionView({
             <Button onClick={() => closeActiveSession(null)}>Close session</Button>
           </div>
         </CardHeader>
+
         <CardContent className="pt-4">
-          <ScrollArea className="h-80 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900">
-            <MessageList messages={data.messages} />
-          </ScrollArea>
+          <div ref={scrollAreaRef}>
+            <ScrollArea className="h-80 rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900">
+              <div ref={messagesContentRef}>
+                <MessageList messages={data.messages} />
+              </div>
+            </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 
       <Card className="shadow-md">
         <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
           <CardTitle className="text-lg">Choices</CardTitle>
-          <div>
-            <Button
-              size="sm"
-              variant={autoPlay ? 'secondary' : 'outline'}
-              onClick={() => setAutoPlay((v) => !v)}
-              className="gap-2"
-            >
-              <Play className="w-4 h-4" />
-              {autoPlay ? 'Stop' : 'Auto'}
-            </Button>
-          </div>
         </CardHeader>
+
         <CardContent className="pt-4">
           {data.choices.length === 0 ? (
             <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-6 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
@@ -120,6 +160,7 @@ export default function SessionView({
   );
 }
 
+// --- MESSAGE LIST ---
 function MessageList({ messages }: { messages: any[] }) {
   return (
     <div className="space-y-3">
@@ -127,9 +168,9 @@ function MessageList({ messages }: { messages: any[] }) {
         <React.Fragment key={m._id + '-frag'}>
           {m.edgeContent && (
             <div className="flex justify-end">
-              <div className="max-w-[75%] rounded-2xl px-4 py-3 shadow-sm transition-all bg-blue-600 text-white">
+              <div className="max-w-[75%] rounded-2xl px-4 py-3 shadow-sm bg-blue-600 text-white">
                 <div className="text-[10px] mb-1.5 font-medium text-blue-100">user</div>
-                <div className="whitespace-pre-wrap leading-relaxed text-[15px]">{m.edgeContent}</div>
+                <div className="whitespace-pre-wrap text-[15px]">{m.edgeContent}</div>
               </div>
             </div>
           )}
@@ -140,19 +181,11 @@ function MessageList({ messages }: { messages: any[] }) {
   );
 }
 
+// --- MESSAGE ---
 function MessageWithImage({ message }: { message: any }) {
-  // Query for image if this message has a nodeId
-  const imageUrl = useQuery(
-    api.image.getNodeImageUrl,
-    message.nodeId ? { nodeId: message.nodeId } : 'skip'
-  );
+  const imageUrl = useQuery(api.image.getNodeImageUrl, message.nodeId ? { nodeId: message.nodeId } : 'skip');
 
   const isUser = message.role === 'user';
-  
-  // Determine image state:
-  // - undefined = loading (query in progress)
-  // - null = no image exists
-  // - string = image URL available
   const hasNodeId = !!message.nodeId;
   const isLoadingImage = hasNodeId && imageUrl === undefined;
   const hasImage = typeof imageUrl === 'string';
@@ -160,39 +193,27 @@ function MessageWithImage({ message }: { message: any }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm transition-all ${
+        className={`max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
           isUser
             ? 'bg-blue-600 text-white'
             : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700'
         }`}
       >
-        <div
-          className={`text-[10px] mb-1.5 font-medium ${isUser ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}
-        >
-          {message.author ?? message.role}
-        </div>
+        <div className="text-[10px] mb-1.5 font-medium">{message.author ?? message.role}</div>
 
-        {/* Loading state - show skeleton while image is loading */}
         {isLoadingImage && (
-          <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900">
-            <div className="w-full h-32 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-slate-300 dark:border-slate-600 border-t-transparent" />
-            </div>
+          <div className="mb-2 h-32 flex items-center justify-center">
+            <div className="animate-spin h-6 w-6 border-2 border-slate-300 border-t-transparent rounded-full" />
           </div>
         )}
 
-        {/* Display image if available - with reduced max height to ensure text visibility */}
         {hasImage && (
-          <div className="mb-2 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
-            <img
-              src={imageUrl}
-              alt="Scene"
-              className="w-full h-auto max-h-32 object-contain bg-slate-100 dark:bg-slate-900"
-            />
+          <div className="mb-2">
+            <img src={imageUrl} alt="Scene" className="w-full max-h-32 object-contain" />
           </div>
         )}
 
-        <div className="whitespace-pre-wrap leading-relaxed text-[15px]">{message.content}</div>
+        <div className="whitespace-pre-wrap text-[15px]">{message.content}</div>
       </div>
     </div>
   );
