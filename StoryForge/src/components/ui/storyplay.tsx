@@ -74,9 +74,9 @@ export default function StoryPlay() {
             <StoryDialogTooltip label={sidebarOpen ? 'Collapse Sidebar' : 'Expand Sidebar'}>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition"
+                className={`p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition ${!sidebarOpen ? 'ml-1' : ''}`}
               >
-                {sidebarOpen ? <MoveLeft className="w-5 h-5" /> : <MoveRight className="w-5 h-5" />}
+                {sidebarOpen ? <MoveLeft className="w-5 h-5" /> : <MoveRight className="w-3 h-3" />}
               </button>
             </StoryDialogTooltip>
           </div>
